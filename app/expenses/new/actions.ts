@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { CATEGORIES } from '@/lib/categories';
+import { CATEGORIES, isSubcategoryOf, type Category } from '@/lib/categories';
 
 export async function createManualExpense(formData: FormData) {
   const supabase = await createClient();
@@ -24,6 +24,10 @@ export async function createManualExpense(formData: FormData) {
   if (!(CATEGORIES as readonly string[]).includes(categoryRaw)) {
     throw new Error('Categorie invalidă.');
   }
+  const category = categoryRaw as Category;
+
+  const subcategoryRaw = String(formData.get('subcategory') ?? '').trim() || null;
+  const subcategory = isSubcategoryOf(category, subcategoryRaw) ? subcategoryRaw : null;
 
   const purchaseDate = String(formData.get('purchase_date') ?? '').trim();
   if (!purchaseDate) {
@@ -39,7 +43,8 @@ export async function createManualExpense(formData: FormData) {
     merchant,
     amount,
     purchase_date: purchaseDate,
-    category: categoryRaw,
+    category,
+    subcategory,
     notes,
     status: 'processed',
     source: 'manual',

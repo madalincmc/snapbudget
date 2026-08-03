@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   let query = supabase
     .from('receipts')
     .select(
-      'id, merchant, amount, purchase_date, category, status, source, storage_path, created_at',
+      'id, merchant, amount, purchase_date, category, subcategory, status, source, storage_path, created_at',
       { count: 'exact' },
     );
 

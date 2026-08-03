@@ -37,7 +37,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     const buffer = Buffer.from(await file.arrayBuffer());
     const text = await detectText(buffer.toString('base64'));
     const parsed = parseReceiptText(text);
-    const category = categorizeMerchant(parsed.merchant);
+    const { category, subcategory } = categorizeMerchant(parsed.merchant);
     const status = parsed.amount !== null ? 'processed' : 'failed';
 
     const { error: updateError } = await supabase
@@ -47,6 +47,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         amount: parsed.amount,
         purchase_date: parsed.purchaseDate,
         category,
+        subcategory,
         status,
         updated_at: new Date().toISOString(),
       })
@@ -56,7 +57,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ ...parsed, category, status });
+    return NextResponse.json({ ...parsed, category, subcategory, status });
   } catch (err) {
     await supabase
       .from('receipts')

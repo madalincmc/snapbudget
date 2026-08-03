@@ -24,7 +24,7 @@ export function ReceiptsList({ receipts }: { receipts: ReceiptRow[] }) {
                   </span>
                   <span className="text-muted-foreground text-xs">
                     {(r.purchase_date ?? r.created_at).slice(0, 10)}
-                    {r.amount !== null && ` · ${r.category ?? 'Altele'}`}
+                    {r.amount !== null && ` · ${r.subcategory ?? r.category ?? 'Altele'}`}
                   </span>
                 </div>
                 {r.amount !== null ? (

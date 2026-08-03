@@ -6,6 +6,7 @@ export interface ReceiptRow {
   amount: number | null;
   purchase_date: string | null;
   category: string | null;
+  subcategory: string | null;
   status: string;
   source: string;
   created_at: string;
