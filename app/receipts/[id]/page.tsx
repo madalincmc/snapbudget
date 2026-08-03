@@ -28,9 +28,9 @@ export default async function ReceiptDetailPage({ params }: { params: Promise<{ 
     notFound();
   }
 
-  const { data: signedUrlData } = await supabase.storage
-    .from('receipts')
-    .createSignedUrl(receipt.storage_path, 600);
+  const { data: signedUrlData } = receipt.storage_path
+    ? await supabase.storage.from('receipts').createSignedUrl(receipt.storage_path, 600)
+    : { data: null };
 
   const updateReceiptWithId = updateReceipt.bind(null, id);
 
