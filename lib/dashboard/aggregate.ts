@@ -7,6 +7,7 @@ export interface ReceiptRow {
   purchase_date: string | null;
   category: string | null;
   status: string;
+  source: string;
   created_at: string;
 }
 

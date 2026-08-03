@@ -14,6 +14,14 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function ManualBadge() {
+  return (
+    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+      Manual
+    </span>
+  );
+}
+
 export function ReceiptsList({ receipts }: { receipts: ReceiptRow[] }) {
   return (
     <div className="flex flex-col gap-3">
@@ -29,8 +37,9 @@ export function ReceiptsList({ receipts }: { receipts: ReceiptRow[] }) {
                 className="flex items-center justify-between gap-4 py-3 transition-colors hover:bg-black/[.02] dark:hover:bg-white/[.04]"
               >
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium text-black dark:text-zinc-50">
-                    {r.merchant ?? 'Bon fără nume'}
+                  <span className="flex items-center gap-2 text-sm font-medium text-black dark:text-zinc-50">
+                    <span>{r.merchant ?? 'Bon fără nume'}</span>
+                    {r.source === 'manual' && <ManualBadge />}
                   </span>
                   <span className="text-xs text-zinc-500 dark:text-zinc-400">
                     {(r.purchase_date ?? r.created_at).slice(0, 10)}
