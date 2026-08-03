@@ -1,17 +1,26 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Camera, CheckCircle2, ImagePlus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CATEGORY_BADGE_CLASS, isCategory } from '@/lib/categories';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { CategoryPicker } from '@/components/category-picker';
+import {
+  CATEGORIES,
+  CATEGORY_BADGE_CLASS,
+  isCategory,
+  isSubcategoryOf,
+  type Category,
+} from '@/lib/categories';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 
-type Status = 'idle' | 'uploading' | 'processing' | 'success' | 'error';
+type Status = 'idle' | 'uploading' | 'processing' | 'reviewing' | 'success' | 'error';
 
 interface OcrResult {
   merchant: string | null;
@@ -26,6 +35,8 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [result, setResult] = useState<OcrResult | null>(null);
+  const [receiptId, setReceiptId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -76,17 +87,20 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
 
     setStatus('processing');
 
+    let data: OcrResult | null = null;
     try {
       const response = await fetch(`/api/receipts/${inserted.id}/process`, { method: 'POST' });
-      const data = await response.json();
+      const json = await response.json();
       if (response.ok) {
-        setResult(data);
+        data = json;
       }
     } catch {
-      // OCR failed silently — the receipt is still saved and can be edited manually later.
+      // OCR failed silently — the user can still fill in the fields below by hand.
     }
 
-    setStatus('success');
+    setReceiptId(inserted.id);
+    setResult(data);
+    setStatus('reviewing');
   }
 
   function reset() {
@@ -94,8 +108,126 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
     setError(null);
     setPreview(null);
     setResult(null);
+    setReceiptId(null);
+    setSaving(false);
     if (cameraInputRef.current) cameraInputRef.current.value = '';
     if (galleryInputRef.current) galleryInputRef.current.value = '';
+  }
+
+  async function handleReviewSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!receiptId) return;
+
+    const formData = new FormData(event.currentTarget);
+    const merchant = String(formData.get('merchant') ?? '').trim() || null;
+    const amountRaw = String(formData.get('amount') ?? '').trim();
+    const purchaseDate = String(formData.get('purchase_date') ?? '').trim() || null;
+    const categoryRaw = String(formData.get('category') ?? '');
+
+    const amount = amountRaw ? Number(amountRaw) : null;
+    if (amountRaw && (Number.isNaN(amount) || (amount as number) < 0)) {
+      setError('Sumă invalidă');
+      return;
+    }
+
+    const category = (
+      (CATEGORIES as readonly string[]).includes(categoryRaw) ? categoryRaw : 'Altele'
+    ) as Category;
+    const subcategoryRaw = String(formData.get('subcategory') ?? '').trim() || null;
+    const subcategory = isSubcategoryOf(category, subcategoryRaw) ? subcategoryRaw : null;
+
+    setSaving(true);
+    setError(null);
+
+    const supabase = createClient();
+    const { error: updateError } = await supabase
+      .from('receipts')
+      .update({
+        merchant,
+        amount,
+        purchase_date: purchaseDate,
+        category,
+        subcategory,
+        status: amount !== null ? 'processed' : 'pending',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', receiptId);
+
+    setSaving(false);
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    setResult({ merchant, amount, purchaseDate, category, subcategory });
+    setStatus('success');
+  }
+
+  if (status === 'reviewing') {
+    return (
+      <form onSubmit={handleReviewSubmit} className="flex w-full max-w-sm flex-col gap-4">
+        <p className="text-muted-foreground text-center text-sm">
+          Verifică datele extrase din bon și corectează dacă e nevoie.
+        </p>
+
+        {preview && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={preview}
+            alt="Previzualizare bon"
+            className="mx-auto h-40 w-40 rounded-lg object-cover"
+          />
+        )}
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="merchant">Comerciant</Label>
+          <Input id="merchant" name="merchant" defaultValue={result?.merchant ?? ''} />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="amount">Sumă (lei)</Label>
+          <Input
+            id="amount"
+            type="number"
+            step="0.01"
+            min="0"
+            name="amount"
+            defaultValue={result?.amount ?? ''}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="purchase_date">Data cumpărării</Label>
+          <Input
+            id="purchase_date"
+            type="date"
+            name="purchase_date"
+            defaultValue={result?.purchaseDate ?? ''}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label>Categorie</Label>
+          <CategoryPicker
+            defaultCategory={
+              isCategory(result?.category ?? null) ? (result!.category as Category) : 'Altele'
+            }
+            defaultSubcategory={result?.subcategory ?? null}
+          />
+        </div>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <Button type="submit" size="lg" disabled={saving} className="mt-2 h-12 rounded-full">
+          {saving ? 'Se salvează…' : 'Salvează'}
+        </Button>
+      </form>
+    );
   }
 
   if (status === 'success') {
