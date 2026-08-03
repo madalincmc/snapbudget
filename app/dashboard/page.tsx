@@ -18,7 +18,7 @@ export default async function DashboardPage() {
 
   const { data: receipts } = await supabase
     .from('receipts')
-    .select('id, merchant, amount, purchase_date, category, status, created_at')
+    .select('id, merchant, amount, purchase_date, category, status, source, created_at')
     .order('created_at', { ascending: false })
     .limit(500);
 
@@ -36,22 +36,38 @@ export default async function DashboardPage() {
               {user.user_metadata.full_name ?? user.email}
             </h1>
           </div>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="h-10 rounded-full border border-black/[.08] px-4 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-white dark:hover:bg-[#1a1a1a]"
+          <div className="flex items-center gap-3">
+            <Link
+              href="/history"
+              className="text-sm text-zinc-600 underline underline-offset-4 dark:text-zinc-400"
             >
-              Deconectare
-            </button>
-          </form>
+              Istoric
+            </Link>
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="h-10 rounded-full border border-black/[.08] px-4 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-white dark:hover:bg-[#1a1a1a]"
+              >
+                Deconectare
+              </button>
+            </form>
+          </div>
         </header>
 
-        <Link
-          href="/receipts/new"
-          className="bg-foreground text-background flex h-12 items-center justify-center rounded-full px-6 font-medium transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
-        >
-          Adaugă bon
-        </Link>
+        <div className="flex gap-3">
+          <Link
+            href="/receipts/new"
+            className="bg-foreground text-background flex h-12 flex-1 items-center justify-center rounded-full px-6 font-medium transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+          >
+            Adaugă bon
+          </Link>
+          <Link
+            href="/expenses/new"
+            className="flex h-12 flex-1 items-center justify-center rounded-full border border-black/[.08] px-6 font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-white dark:hover:bg-[#1a1a1a]"
+          >
+            Cheltuială manuală
+          </Link>
+        </div>
 
         <div className="flex flex-col gap-1">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">Total cheltuit luna aceasta</p>
