@@ -2,3 +2,5 @@ node_modules
 .next
 public
 package-lock.json
+.agents
+.claude
