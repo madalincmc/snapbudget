@@ -1,4 +1,5 @@
 import { GoogleSignInButton } from '@/components/google-sign-in-button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default async function LoginPage({
   searchParams,
@@ -8,18 +9,16 @@ export default async function LoginPage({
   const { next } = await searchParams;
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-6 dark:bg-black">
-      <div className="flex w-full max-w-sm flex-col items-center gap-8 text-center">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-black dark:text-zinc-50">
-            SnapBudget
-          </h1>
-          <p className="text-zinc-600 dark:text-zinc-400">
-            Fotografiază bonul, restul îl facem noi.
-          </p>
-        </div>
-        <GoogleSignInButton next={next ?? '/dashboard'} />
-      </div>
+    <div className="bg-muted/40 flex flex-1 items-center justify-center px-6">
+      <Card className="w-full max-w-sm">
+        <CardHeader className="items-center text-center">
+          <CardTitle className="text-2xl">SnapBudget</CardTitle>
+          <CardDescription>Fotografiază bonul, restul îl facem noi.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <GoogleSignInButton next={next ?? '/dashboard'} />
+        </CardContent>
+      </Card>
     </div>
   );
 }
