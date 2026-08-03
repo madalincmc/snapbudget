@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { signOut } from './actions';
 
@@ -22,6 +23,12 @@ export default async function DashboardPage() {
           Dashboard-ul cu cheltuieli vine în curând.
         </p>
       </div>
+      <Link
+        href="/receipts/new"
+        className="bg-foreground text-background flex h-12 items-center justify-center rounded-full px-6 font-medium transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+      >
+        Adaugă bon
+      </Link>
       <form action={signOut}>
         <button
           type="submit"
