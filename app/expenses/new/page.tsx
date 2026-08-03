@@ -2,18 +2,11 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { CATEGORIES } from '@/lib/categories';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { CategoryPicker } from '@/components/category-picker';
 import { createManualExpense } from './actions';
 
 export default async function NewExpensePage() {
@@ -63,19 +56,8 @@ export default async function NewExpensePage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="category">Categorie — obligatoriu</Label>
-            <Select name="category" required defaultValue="Altele">
-              <SelectTrigger id="category" className="w-full">
-                <SelectValue placeholder="Alege o categorie" />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Categorie — obligatoriu</Label>
+            <CategoryPicker defaultCategory="Altele" />
           </div>
 
           <div className="flex flex-col gap-1.5">

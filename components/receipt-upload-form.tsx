@@ -18,6 +18,7 @@ interface OcrResult {
   amount: number | null;
   purchaseDate: string | null;
   category: string | null;
+  subcategory: string | null;
 }
 
 export function ReceiptUploadForm({ userId }: { userId: string }) {
@@ -113,7 +114,7 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
             {result.purchaseDate && <p>{result.purchaseDate}</p>}
             {isCategory(result.category) && (
               <Badge className={`border-transparent ${CATEGORY_BADGE_CLASS[result.category]}`}>
-                {result.category}
+                {result.subcategory ?? result.category}
               </Badge>
             )}
           </div>

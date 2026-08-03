@@ -32,6 +32,7 @@ interface HistoryReceipt {
   amount: number | null;
   purchase_date: string | null;
   category: string | null;
+  subcategory: string | null;
   status: string;
   source: string;
   created_at: string;
@@ -72,7 +73,9 @@ const CATEGORY_ITEMS: Record<string, string> = {
 
 const MONTH_ITEMS: Record<string, string> = {
   all: 'Toate lunile',
-  ...Object.fromEntries(MONTH_NAMES.map((name, index) => [String(index + 1).padStart(2, '0'), name])),
+  ...Object.fromEntries(
+    MONTH_NAMES.map((name, index) => [String(index + 1).padStart(2, '0'), name]),
+  ),
 };
 
 const SORT_ITEMS: Record<string, string> = Object.fromEntries(
@@ -240,7 +243,7 @@ export function HistoryList() {
                 </span>
                 <span className="text-muted-foreground text-xs">
                   {(r.purchase_date ?? r.created_at).slice(0, 10)}
-                  {r.amount !== null && ` · ${r.category ?? 'Altele'}`}
+                  {r.amount !== null && ` · ${r.subcategory ?? r.category ?? 'Altele'}`}
                 </span>
               </Link>
 

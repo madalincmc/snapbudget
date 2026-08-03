@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { CATEGORIES } from '@/lib/categories';
+import { CATEGORIES, isSubcategoryOf, type Category } from '@/lib/categories';
 
 export async function updateReceipt(id: string, formData: FormData) {
   const supabase = await createClient();
@@ -25,7 +25,12 @@ export async function updateReceipt(id: string, formData: FormData) {
     throw new Error('Sumă invalidă');
   }
 
-  const category = (CATEGORIES as readonly string[]).includes(categoryRaw) ? categoryRaw : 'Altele';
+  const category = (
+    (CATEGORIES as readonly string[]).includes(categoryRaw) ? categoryRaw : 'Altele'
+  ) as Category;
+
+  const subcategoryRaw = String(formData.get('subcategory') ?? '').trim() || null;
+  const subcategory = isSubcategoryOf(category, subcategoryRaw) ? subcategoryRaw : null;
 
   const { error } = await supabase
     .from('receipts')
@@ -34,6 +39,7 @@ export async function updateReceipt(id: string, formData: FormData) {
       amount,
       purchase_date: purchaseDate,
       category,
+      subcategory,
       status: amount !== null ? 'processed' : 'pending',
       updated_at: new Date().toISOString(),
     })

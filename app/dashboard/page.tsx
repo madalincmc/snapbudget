@@ -21,7 +21,9 @@ export default async function DashboardPage() {
 
   const { data: receipts } = await supabase
     .from('receipts')
-    .select('id, merchant, amount, purchase_date, category, status, source, created_at')
+    .select(
+      'id, merchant, amount, purchase_date, category, subcategory, status, source, created_at',
+    )
     .order('created_at', { ascending: false })
     .limit(500);
 
@@ -40,7 +42,12 @@ export default async function DashboardPage() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" nativeButton={false} render={<Link href="/history" />}>
+            <Button
+              variant="ghost"
+              size="icon"
+              nativeButton={false}
+              render={<Link href="/history" />}
+            >
               <History />
               <span className="sr-only">Istoric</span>
             </Button>

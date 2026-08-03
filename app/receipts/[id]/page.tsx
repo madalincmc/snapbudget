@@ -2,17 +2,11 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { CATEGORIES } from '@/lib/categories';
+import { isCategory } from '@/lib/categories';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { CategoryPicker } from '@/components/category-picker';
 import { updateReceipt } from './actions';
 
 export default async function ReceiptDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -28,7 +22,7 @@ export default async function ReceiptDetailPage({ params }: { params: Promise<{ 
 
   const { data: receipt } = await supabase
     .from('receipts')
-    .select('id, merchant, amount, purchase_date, category, storage_path')
+    .select('id, merchant, amount, purchase_date, category, subcategory, storage_path')
     .eq('id', id)
     .single();
 
@@ -95,19 +89,11 @@ export default async function ReceiptDetailPage({ params }: { params: Promise<{ 
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="category">Categorie</Label>
-            <Select name="category" defaultValue={receipt.category ?? 'Altele'}>
-              <SelectTrigger id="category" className="w-full">
-                <SelectValue placeholder="Alege o categorie" />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Categorie</Label>
+            <CategoryPicker
+              defaultCategory={isCategory(receipt.category) ? receipt.category : 'Altele'}
+              defaultSubcategory={receipt.subcategory}
+            />
           </div>
 
           <Button type="submit" size="lg" className="mt-2 h-12 rounded-full">
