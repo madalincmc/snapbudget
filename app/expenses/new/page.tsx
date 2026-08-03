@@ -1,11 +1,20 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { CATEGORIES } from '@/lib/categories';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { createManualExpense } from './actions';
-
-const inputClass =
-  'h-11 rounded-lg border border-black/[.08] bg-white px-3 text-black dark:border-white/[.145] dark:bg-zinc-900 dark:text-white';
 
 export default async function NewExpensePage() {
   const supabase = await createClient();
@@ -20,81 +29,79 @@ export default async function NewExpensePage() {
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="flex flex-1 justify-center bg-zinc-50 px-6 py-10 dark:bg-black">
+    <div className="bg-muted/40 flex flex-1 justify-center px-6 py-10">
       <div className="flex w-full max-w-lg flex-col gap-6">
-        <Link
-          href="/dashboard"
-          className="text-sm text-zinc-600 underline underline-offset-4 dark:text-zinc-400"
+        <Button
+          variant="link"
+          className="self-start px-0"
+          nativeButton={false}
+          render={<Link href="/dashboard" />}
         >
-          ← Înapoi la dashboard
-        </Link>
+          <ArrowLeft />
+          Înapoi la dashboard
+        </Button>
 
         <div className="flex flex-col gap-1">
-          <h1 className="text-xl font-semibold text-black dark:text-zinc-50">
-            Adaugă cheltuială manuală
-          </h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-foreground text-xl font-semibold">Adaugă cheltuială manuală</h1>
+          <p className="text-muted-foreground text-sm">
             Pentru cheltuieli fără bon: cash, parcare, transport, etc.
           </p>
         </div>
 
         <form action={createManualExpense} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Sumă (lei) *</span>
-            <input
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="amount">Sumă (lei) — obligatoriu</Label>
+            <Input
+              id="amount"
               type="number"
               step="0.01"
               min="0.01"
               name="amount"
               required
               autoFocus
-              className={inputClass}
             />
-          </label>
+          </div>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Categorie *</span>
-            <select name="category" required defaultValue="Altele" className={inputClass}>
-              {CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="category">Categorie — obligatoriu</Label>
+            <Select name="category" required defaultValue="Altele">
+              <SelectTrigger id="category" className="w-full">
+                <SelectValue placeholder="Alege o categorie" />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Data *</span>
-            <input
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="purchase_date">Data — obligatoriu</Label>
+            <Input
+              id="purchase_date"
               type="date"
               name="purchase_date"
               required
               defaultValue={today}
-              className={inputClass}
             />
-          </label>
+          </div>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Comerciant / titlu</span>
-            <input name="merchant" placeholder="opțional" className={inputClass} />
-          </label>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="merchant">Comerciant / titlu (opțional)</Label>
+            <Input id="merchant" name="merchant" placeholder="ex: Parcare centru" />
+          </div>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Notițe</span>
-            <textarea
-              name="notes"
-              rows={3}
-              placeholder="opțional"
-              className="rounded-lg border border-black/[.08] bg-white px-3 py-2 text-black dark:border-white/[.145] dark:bg-zinc-900 dark:text-white"
-            />
-          </label>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="notes">Notițe (opțional)</Label>
+            <Textarea id="notes" name="notes" rows={3} placeholder="ex: plătit cash" />
+          </div>
 
-          <button
-            type="submit"
-            className="bg-foreground text-background mt-2 h-12 rounded-full font-medium transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
-          >
+          <Button type="submit" size="lg" className="mt-2 h-12 rounded-full">
             Salvează
-          </button>
+          </Button>
         </form>
       </div>
     </div>

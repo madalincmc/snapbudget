@@ -1,7 +1,12 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { Camera, CheckCircle2, ImagePlus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CATEGORY_BADGE_CLASS, isCategory } from '@/lib/categories';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
@@ -95,22 +100,27 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
   if (status === 'success') {
     return (
       <div className="flex flex-col items-center gap-4 text-center">
-        <p className="text-lg font-medium text-black dark:text-zinc-50">Bon adăugat!</p>
+        <div className="text-foreground flex items-center gap-2 text-lg font-medium">
+          <CheckCircle2 className="h-5 w-5 text-[#0ca30c]" />
+          Bon adăugat!
+        </div>
         {result && (result.merchant || result.amount !== null) && (
-          <div className="flex flex-col gap-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <div className="text-muted-foreground flex flex-col items-center gap-2 text-sm">
             {result.merchant && <p>{result.merchant}</p>}
-            {result.amount !== null && <p>{result.amount.toFixed(2)} lei</p>}
+            {result.amount !== null && (
+              <p className="text-foreground font-medium">{result.amount.toFixed(2)} lei</p>
+            )}
             {result.purchaseDate && <p>{result.purchaseDate}</p>}
-            {result.category && <p>{result.category}</p>}
+            {isCategory(result.category) && (
+              <Badge className={`border-transparent ${CATEGORY_BADGE_CLASS[result.category]}`}>
+                {result.category}
+              </Badge>
+            )}
           </div>
         )}
-        <button
-          type="button"
-          onClick={reset}
-          className="h-12 rounded-full border border-black/[.08] px-6 font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-white dark:hover:bg-[#1a1a1a]"
-        >
+        <Button variant="outline" size="lg" className="rounded-full" onClick={reset}>
           Adaugă alt bon
-        </button>
+        </Button>
       </div>
     );
   }
@@ -140,26 +150,33 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
         onChange={(e) => handleFile(e.target.files?.[0])}
       />
 
-      <button
-        type="button"
+      <Button
+        size="lg"
         disabled={busy}
         onClick={() => cameraInputRef.current?.click()}
-        className="bg-foreground text-background flex h-12 w-64 items-center justify-center rounded-full px-5 font-medium transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
+        className="h-12 w-64 rounded-full"
       >
+        <Camera />
         {status === 'uploading' && 'Se încarcă…'}
         {status === 'processing' && 'Se procesează…'}
         {!busy && 'Fă o poză'}
-      </button>
-      <button
-        type="button"
+      </Button>
+      <Button
+        variant="outline"
+        size="lg"
         disabled={busy}
         onClick={() => galleryInputRef.current?.click()}
-        className="flex h-12 w-64 items-center justify-center rounded-full border border-black/[.08] px-5 font-medium text-black transition-colors hover:bg-black/[.04] disabled:opacity-50 dark:border-white/[.145] dark:text-white dark:hover:bg-[#1a1a1a]"
+        className="h-12 w-64 rounded-full"
       >
+        <ImagePlus />
         Alege din galerie
-      </button>
+      </Button>
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 }

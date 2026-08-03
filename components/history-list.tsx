@@ -2,7 +2,29 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { Search, Trash2 } from 'lucide-react';
 import { CATEGORIES } from '@/lib/categories';
+import { ManualBadge, StatusBadge, ReceiptThumbnail } from '@/components/receipt-badges';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface HistoryReceipt {
   id: string;
@@ -25,32 +47,44 @@ const SORT_OPTIONS = [
   { value: 'merchant_desc', label: 'Comerciant Z–A' },
 ];
 
-function StatusBadge({ status }: { status: string }) {
-  const isPending = status === 'pending';
-  const label = isPending ? 'Se procesează' : 'Editare necesară';
-  const dotClass = isPending ? 'bg-[#fab219]' : 'bg-[#ec835a]';
+const MONTH_NAMES = [
+  'Ianuarie',
+  'Februarie',
+  'Martie',
+  'Aprilie',
+  'Mai',
+  'Iunie',
+  'Iulie',
+  'August',
+  'Septembrie',
+  'Octombrie',
+  'Noiembrie',
+  'Decembrie',
+];
 
-  return (
-    <span className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
-      <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden="true" />
-      {label}
-    </span>
-  );
-}
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => String(CURRENT_YEAR - i));
 
-function ManualBadge() {
-  return (
-    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-      Manual
-    </span>
-  );
-}
+const CATEGORY_ITEMS: Record<string, string> = {
+  all: 'Toate categoriile',
+  ...Object.fromEntries(CATEGORIES.map((c) => [c, c])),
+};
+
+const MONTH_ITEMS: Record<string, string> = {
+  all: 'Toate lunile',
+  ...Object.fromEntries(MONTH_NAMES.map((name, index) => [String(index + 1).padStart(2, '0'), name])),
+};
+
+const SORT_ITEMS: Record<string, string> = Object.fromEntries(
+  SORT_OPTIONS.map((o) => [o.value, o.label]),
+);
 
 export function HistoryList() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [category, setCategory] = useState('');
-  const [month, setMonth] = useState('');
+  const [category, setCategory] = useState('all');
+  const [month, setMonth] = useState('all');
+  const [year, setYear] = useState(String(CURRENT_YEAR));
   const [sort, setSort] = useState('date_desc');
 
   const [receipts, setReceipts] = useState<HistoryReceipt[]>([]);
@@ -69,8 +103,8 @@ export function HistoryList() {
 
     const params = new URLSearchParams({ sort, offset: String(offset) });
     if (debouncedSearch) params.set('q', debouncedSearch);
-    if (category) params.set('category', category);
-    if (month) params.set('month', month);
+    if (category !== 'all') params.set('category', category);
+    if (month !== 'all') params.set('month', `${year}-${month}`);
 
     try {
       const response = await fetch(`/api/receipts/history?${params.toString()}`);
@@ -92,11 +126,9 @@ export function HistoryList() {
     fetchPage(0, true);
     // fetchPage is stable across renders (reads current state via closure by design).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, category, month, sort]);
+  }, [debouncedSearch, category, month, year, sort]);
 
   async function handleDelete(id: string) {
-    if (!confirm('Sigur ștergi acest bon? Nu poate fi anulat.')) return;
-
     const response = await fetch(`/api/receipts/${id}`, { method: 'DELETE' });
     if (response.ok) {
       setReceipts((prev) => prev.filter((r) => r.id !== id));
@@ -105,78 +137,108 @@ export function HistoryList() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Caută după comerciant…"
-          className="h-11 flex-1 rounded-lg border border-black/[.08] bg-white px-3 text-black dark:border-white/[.145] dark:bg-zinc-900 dark:text-white"
-        />
-        <select
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <div className="relative flex-1 sm:min-w-48">
+          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
+          <Input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Caută după comerciant…"
+            className="h-9 pl-8"
+          />
+        </div>
+
+        <Select
+          items={CATEGORY_ITEMS}
           value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="h-11 rounded-lg border border-black/[.08] bg-white px-3 text-black dark:border-white/[.145] dark:bg-zinc-900 dark:text-white"
+          onValueChange={(value) => setCategory(value ?? 'all')}
         >
-          <option value="">Toate categoriile</option>
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        <input
-          type="month"
+          <SelectTrigger className="w-full sm:w-auto">
+            <SelectValue placeholder="Categorie" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Toate categoriile</SelectItem>
+            {CATEGORIES.map((c) => (
+              <SelectItem key={c} value={c}>
+                {c}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          items={MONTH_ITEMS}
           value={month}
-          onChange={(e) => setMonth(e.target.value)}
-          className="h-11 rounded-lg border border-black/[.08] bg-white px-3 text-black dark:border-white/[.145] dark:bg-zinc-900 dark:text-white"
-        />
-        <select
-          value={sort}
-          onChange={(e) => setSort(e.target.value)}
-          className="h-11 rounded-lg border border-black/[.08] bg-white px-3 text-black dark:border-white/[.145] dark:bg-zinc-900 dark:text-white"
+          onValueChange={(value) => setMonth(value ?? 'all')}
         >
-          {SORT_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full sm:w-auto">
+            <SelectValue placeholder="Lună" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Toate lunile</SelectItem>
+            {MONTH_NAMES.map((name, index) => (
+              <SelectItem key={name} value={String(index + 1).padStart(2, '0')}>
+                {name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {month !== 'all' && (
+          <Select value={year} onValueChange={(value) => setYear(value ?? String(CURRENT_YEAR))}>
+            <SelectTrigger className="w-full sm:w-auto">
+              <SelectValue placeholder="An" />
+            </SelectTrigger>
+            <SelectContent>
+              {YEAR_OPTIONS.map((y) => (
+                <SelectItem key={y} value={y}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        <Select
+          items={SORT_ITEMS}
+          value={sort}
+          onValueChange={(value) => setSort(value ?? 'date_desc')}
+        >
+          <SelectTrigger className="w-full sm:w-auto">
+            <SelectValue placeholder="Sortare" />
+          </SelectTrigger>
+          <SelectContent>
+            {SORT_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-destructive text-sm">{error}</p>}
 
       {!loading && receipts.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-16 text-center">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Niciun bon găsit.</p>
-          <Link
-            href="/receipts/new"
-            className="bg-foreground text-background flex h-11 items-center justify-center rounded-full px-5 font-medium transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
-          >
+          <p className="text-muted-foreground text-sm">Niciun bon găsit.</p>
+          <Button nativeButton={false} render={<Link href="/receipts/new" />}>
             Adaugă primul bon
-          </Link>
+          </Button>
         </div>
       ) : (
-        <ul className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
+        <ul className="divide-border flex flex-col divide-y">
           {receipts.map((r) => (
             <li key={r.id} className="flex items-center gap-3 py-3">
-              {r.thumbnailUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={r.thumbnailUrl}
-                  alt=""
-                  className="h-12 w-12 flex-none rounded-lg object-cover"
-                />
-              ) : (
-                <div className="h-12 w-12 flex-none rounded-lg bg-zinc-100 dark:bg-zinc-800" />
-              )}
+              <ReceiptThumbnail source={r.source} thumbnailUrl={r.thumbnailUrl} />
 
               <Link href={`/receipts/${r.id}`} className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="flex items-center gap-2 text-sm font-medium text-black dark:text-zinc-50">
+                <span className="text-foreground flex items-center gap-2 text-sm font-medium">
                   <span className="truncate">{r.merchant ?? 'Bon fără nume'}</span>
                   {r.source === 'manual' && <ManualBadge />}
                 </span>
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                <span className="text-muted-foreground text-xs">
                   {(r.purchase_date ?? r.created_at).slice(0, 10)}
                   {r.amount !== null && ` · ${r.category ?? 'Altele'}`}
                 </span>
@@ -184,19 +246,37 @@ export function HistoryList() {
 
               <div className="flex flex-none items-center gap-3">
                 {r.amount !== null ? (
-                  <span className="text-sm font-medium text-black tabular-nums dark:text-zinc-50">
+                  <span className="text-foreground text-sm font-medium tabular-nums">
                     {r.amount.toFixed(2)} lei
                   </span>
                 ) : (
                   <StatusBadge status={r.status} />
                 )}
-                <button
-                  type="button"
-                  onClick={() => handleDelete(r.id)}
-                  className="text-xs text-red-600 hover:underline dark:text-red-400"
-                >
-                  Șterge
-                </button>
+
+                <AlertDialog>
+                  <AlertDialogTrigger
+                    render={
+                      <Button variant="ghost" size="icon-sm" className="text-destructive">
+                        <Trash2 />
+                        <span className="sr-only">Șterge bonul</span>
+                      </Button>
+                    }
+                  />
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Ștergi acest bon?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {r.merchant ?? 'Acest bon'} va fi șters definitiv. Nu poate fi anulat.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Anulează</AlertDialogCancel>
+                      <AlertDialogAction variant="destructive" onClick={() => handleDelete(r.id)}>
+                        Șterge
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </li>
           ))}
@@ -204,14 +284,13 @@ export function HistoryList() {
       )}
 
       {hasMore && (
-        <button
-          type="button"
+        <Button
+          variant="outline"
           disabled={loading}
           onClick={() => fetchPage(receipts.length, false)}
-          className="h-11 rounded-full border border-black/[.08] text-sm font-medium text-black transition-colors hover:bg-black/[.04] disabled:opacity-50 dark:border-white/[.145] dark:text-white dark:hover:bg-[#1a1a1a]"
         >
           {loading ? 'Se încarcă…' : 'Încarcă mai multe'}
-        </button>
+        </Button>
       )}
     </div>
   );

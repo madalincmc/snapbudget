@@ -1,11 +1,19 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { CATEGORIES } from '@/lib/categories';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { updateReceipt } from './actions';
-
-const inputClass =
-  'h-11 rounded-lg border border-black/[.08] bg-white px-3 text-black dark:border-white/[.145] dark:bg-zinc-900 dark:text-white';
 
 export default async function ReceiptDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -35,75 +43,76 @@ export default async function ReceiptDetailPage({ params }: { params: Promise<{ 
   const updateReceiptWithId = updateReceipt.bind(null, id);
 
   return (
-    <div className="flex flex-1 justify-center bg-zinc-50 px-6 py-10 dark:bg-black">
+    <div className="bg-muted/40 flex flex-1 justify-center px-6 py-10">
       <div className="flex w-full max-w-lg flex-col gap-6">
-        <Link
-          href="/dashboard"
-          className="text-sm text-zinc-600 underline underline-offset-4 dark:text-zinc-400"
+        <Button
+          variant="link"
+          className="self-start px-0"
+          nativeButton={false}
+          render={<Link href="/dashboard" />}
         >
-          ← Înapoi la dashboard
-        </Link>
+          <ArrowLeft />
+          Înapoi la dashboard
+        </Button>
 
-        <h1 className="text-xl font-semibold text-black dark:text-zinc-50">Detalii bon</h1>
+        <h1 className="text-foreground text-xl font-semibold">Detalii bon</h1>
 
         {signedUrlData?.signedUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={signedUrlData.signedUrl}
             alt="Bon"
-            className="max-h-80 w-full rounded-lg bg-white object-contain dark:bg-zinc-900"
+            className="bg-card max-h-80 w-full rounded-lg object-contain"
           />
         )}
 
         <form action={updateReceiptWithId} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Comerciant</span>
-            <input name="merchant" defaultValue={receipt.merchant ?? ''} className={inputClass} />
-          </label>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="merchant">Comerciant</Label>
+            <Input id="merchant" name="merchant" defaultValue={receipt.merchant ?? ''} />
+          </div>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Sumă (lei)</span>
-            <input
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="amount">Sumă (lei)</Label>
+            <Input
+              id="amount"
               type="number"
               step="0.01"
               min="0"
               name="amount"
               defaultValue={receipt.amount ?? ''}
-              className={inputClass}
             />
-          </label>
+          </div>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Data cumpărării</span>
-            <input
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="purchase_date">Data cumpărării</Label>
+            <Input
+              id="purchase_date"
               type="date"
               name="purchase_date"
               defaultValue={receipt.purchase_date ?? ''}
-              className={inputClass}
             />
-          </label>
+          </div>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-zinc-600 dark:text-zinc-400">Categorie</span>
-            <select
-              name="category"
-              defaultValue={receipt.category ?? 'Altele'}
-              className={inputClass}
-            >
-              {CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="category">Categorie</Label>
+            <Select name="category" defaultValue={receipt.category ?? 'Altele'}>
+              <SelectTrigger id="category" className="w-full">
+                <SelectValue placeholder="Alege o categorie" />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <button
-            type="submit"
-            className="bg-foreground text-background mt-2 h-12 rounded-full font-medium transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
-          >
+          <Button type="submit" size="lg" className="mt-2 h-12 rounded-full">
             Salvează
-          </button>
+          </Button>
         </form>
       </div>
     </div>

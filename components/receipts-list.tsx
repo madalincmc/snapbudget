@@ -1,53 +1,34 @@
 import Link from 'next/link';
 import type { ReceiptRow } from '@/lib/dashboard/aggregate';
-
-function StatusBadge({ status }: { status: string }) {
-  const isPending = status === 'pending';
-  const label = isPending ? 'Se procesează' : 'Editare necesară';
-  const dotClass = isPending ? 'bg-[#fab219]' : 'bg-[#ec835a]';
-
-  return (
-    <span className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
-      <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden="true" />
-      {label}
-    </span>
-  );
-}
-
-function ManualBadge() {
-  return (
-    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-      Manual
-    </span>
-  );
-}
+import { ManualBadge, StatusBadge, ReceiptThumbnail } from '@/components/receipt-badges';
 
 export function ReceiptsList({ receipts }: { receipts: ReceiptRow[] }) {
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">Ultimele bonuri</h2>
+      <h2 className="text-muted-foreground text-sm font-medium">Ultimele bonuri</h2>
       {receipts.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Niciun bon încă.</p>
+        <p className="text-muted-foreground text-sm">Niciun bon încă.</p>
       ) : (
-        <ul className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
+        <ul className="divide-border flex flex-col divide-y">
           {receipts.map((r) => (
             <li key={r.id}>
               <Link
                 href={`/receipts/${r.id}`}
-                className="flex items-center justify-between gap-4 py-3 transition-colors hover:bg-black/[.02] dark:hover:bg-white/[.04]"
+                className="hover:bg-muted/50 flex items-center gap-3 py-3 transition-colors"
               >
-                <div className="flex flex-col">
-                  <span className="flex items-center gap-2 text-sm font-medium text-black dark:text-zinc-50">
-                    <span>{r.merchant ?? 'Bon fără nume'}</span>
+                <ReceiptThumbnail source={r.source} />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-foreground flex items-center gap-2 text-sm font-medium">
+                    <span className="truncate">{r.merchant ?? 'Bon fără nume'}</span>
                     {r.source === 'manual' && <ManualBadge />}
                   </span>
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  <span className="text-muted-foreground text-xs">
                     {(r.purchase_date ?? r.created_at).slice(0, 10)}
                     {r.amount !== null && ` · ${r.category ?? 'Altele'}`}
                   </span>
                 </div>
                 {r.amount !== null ? (
-                  <span className="text-sm font-medium text-black tabular-nums dark:text-zinc-50">
+                  <span className="text-foreground flex-none text-sm font-medium tabular-nums">
                     {r.amount.toFixed(2)} lei
                   </span>
                 ) : (
