@@ -6,12 +6,19 @@ import { createClient } from '@/lib/supabase/client';
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 
-type Status = 'idle' | 'uploading' | 'success' | 'error';
+type Status = 'idle' | 'uploading' | 'processing' | 'success' | 'error';
+
+interface OcrResult {
+  merchant: string | null;
+  amount: number | null;
+  purchaseDate: string | null;
+}
 
 export function ReceiptUploadForm({ userId }: { userId: string }) {
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [result, setResult] = useState<OcrResult | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -31,6 +38,7 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
 
     setStatus('uploading');
     setError(null);
+    setResult(null);
     setPreview(URL.createObjectURL(file));
 
     const supabase = createClient();
@@ -47,14 +55,28 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
       return;
     }
 
-    const { error: insertError } = await supabase
+    const { data: inserted, error: insertError } = await supabase
       .from('receipts')
-      .insert({ user_id: userId, storage_path: path, status: 'pending' });
+      .insert({ user_id: userId, storage_path: path, status: 'pending' })
+      .select('id')
+      .single();
 
-    if (insertError) {
+    if (insertError || !inserted) {
       setStatus('error');
-      setError(insertError.message);
+      setError(insertError?.message ?? 'Nu am putut salva bonul.');
       return;
+    }
+
+    setStatus('processing');
+
+    try {
+      const response = await fetch(`/api/receipts/${inserted.id}/process`, { method: 'POST' });
+      const data = await response.json();
+      if (response.ok) {
+        setResult(data);
+      }
+    } catch {
+      // OCR failed silently — the receipt is still saved and can be edited manually later.
     }
 
     setStatus('success');
@@ -64,6 +86,7 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
     setStatus('idle');
     setError(null);
     setPreview(null);
+    setResult(null);
     if (cameraInputRef.current) cameraInputRef.current.value = '';
     if (galleryInputRef.current) galleryInputRef.current.value = '';
   }
@@ -72,6 +95,13 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
     return (
       <div className="flex flex-col items-center gap-4 text-center">
         <p className="text-lg font-medium text-black dark:text-zinc-50">Bon adăugat!</p>
+        {result && (result.merchant || result.amount !== null) && (
+          <div className="flex flex-col gap-1 text-sm text-zinc-600 dark:text-zinc-400">
+            {result.merchant && <p>{result.merchant}</p>}
+            {result.amount !== null && <p>{result.amount.toFixed(2)} lei</p>}
+            {result.purchaseDate && <p>{result.purchaseDate}</p>}
+          </div>
+        )}
         <button
           type="button"
           onClick={reset}
@@ -83,9 +113,11 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
     );
   }
 
+  const busy = status === 'uploading' || status === 'processing';
+
   return (
     <div className="flex flex-col items-center gap-4">
-      {preview && status === 'uploading' && (
+      {preview && busy && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={preview} alt="Previzualizare bon" className="h-48 w-48 rounded-lg object-cover" />
       )}
@@ -108,15 +140,17 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
 
       <button
         type="button"
-        disabled={status === 'uploading'}
+        disabled={busy}
         onClick={() => cameraInputRef.current?.click()}
         className="bg-foreground text-background flex h-12 w-64 items-center justify-center rounded-full px-5 font-medium transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
       >
-        {status === 'uploading' ? 'Se încarcă…' : 'Fă o poză'}
+        {status === 'uploading' && 'Se încarcă…'}
+        {status === 'processing' && 'Se procesează…'}
+        {!busy && 'Fă o poză'}
       </button>
       <button
         type="button"
-        disabled={status === 'uploading'}
+        disabled={busy}
         onClick={() => galleryInputRef.current?.click()}
         className="flex h-12 w-64 items-center justify-center rounded-full border border-black/[.08] px-5 font-medium text-black transition-colors hover:bg-black/[.04] disabled:opacity-50 dark:border-white/[.145] dark:text-white dark:hover:bg-[#1a1a1a]"
       >
