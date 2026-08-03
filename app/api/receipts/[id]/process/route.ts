@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { detectText } from '@/lib/ocr/vision';
 import { parseReceiptText } from '@/lib/ocr/parse-receipt';
+import { categorizeMerchant } from '@/lib/categorization/categorize';
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -36,6 +37,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     const buffer = Buffer.from(await file.arrayBuffer());
     const text = await detectText(buffer.toString('base64'));
     const parsed = parseReceiptText(text);
+    const category = categorizeMerchant(parsed.merchant);
     const status = parsed.amount !== null ? 'processed' : 'failed';
 
     const { error: updateError } = await supabase
@@ -44,6 +46,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         merchant: parsed.merchant,
         amount: parsed.amount,
         purchase_date: parsed.purchaseDate,
+        category,
         status,
         updated_at: new Date().toISOString(),
       })
@@ -53,7 +56,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ ...parsed, status });
+    return NextResponse.json({ ...parsed, category, status });
   } catch (err) {
     await supabase
       .from('receipts')

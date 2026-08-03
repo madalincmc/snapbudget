@@ -12,6 +12,7 @@ interface OcrResult {
   merchant: string | null;
   amount: number | null;
   purchaseDate: string | null;
+  category: string | null;
 }
 
 export function ReceiptUploadForm({ userId }: { userId: string }) {
@@ -100,6 +101,7 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
             {result.merchant && <p>{result.merchant}</p>}
             {result.amount !== null && <p>{result.amount.toFixed(2)} lei</p>}
             {result.purchaseDate && <p>{result.purchaseDate}</p>}
+            {result.category && <p>{result.category}</p>}
           </div>
         )}
         <button
