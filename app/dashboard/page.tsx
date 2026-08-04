@@ -2,12 +2,23 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { History, LogOut, Plus, Receipt } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { buildDashboardData, type ReceiptRow } from '@/lib/dashboard/aggregate';
+import {
+  buildDashboardData,
+  dashboardRangeStart,
+  toDateString,
+  type ReceiptRow,
+} from '@/lib/dashboard/aggregate';
 import { CategoryBreakdown } from '@/components/category-breakdown';
+import { MonthComparisonCard } from '@/components/month-comparison-card';
+import { TrendInsightCards } from '@/components/trend-insight-cards';
+import { SpendingTrendChart } from '@/components/spending-trend-chart';
 import { ReceiptsList } from '@/components/receipts-list';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { signOut } from './actions';
+
+const RECEIPT_COLUMNS =
+  'id, merchant, amount, purchase_date, category, subcategory, status, source, created_at';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -19,17 +30,36 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
-  const { data: receipts } = await supabase
-    .from('receipts')
-    .select(
-      'id, merchant, amount, purchase_date, category, subcategory, status, source, created_at',
-    )
-    .order('created_at', { ascending: false })
-    .limit(500);
+  const now = new Date();
+  const rangeStart = dashboardRangeStart(now);
+  const rangeStartDateStr = toDateString(rangeStart);
+  const rangeStartISO = rangeStart.toISOString();
 
-  const { monthTotal, categoryTotals, latest } = buildDashboardData(
-    (receipts ?? []) as ReceiptRow[],
-  );
+  // Covers the previous month + last 30 days, needed for the comparison card
+  // and trend chart. Manual/backdated entries without a purchase_date yet
+  // fall back to created_at, matching how buildDashboardData buckets them.
+  const [{ data: rangeReceipts }, { data: latestReceipts }] = await Promise.all([
+    supabase
+      .from('receipts')
+      .select(RECEIPT_COLUMNS)
+      .eq('status', 'processed')
+      .or(
+        `purchase_date.gte.${rangeStartDateStr},and(purchase_date.is.null,created_at.gte.${rangeStartISO})`,
+      )
+      .limit(5000),
+    supabase.from('receipts').select(RECEIPT_COLUMNS).order('created_at', { ascending: false }).limit(10),
+  ]);
+
+  const {
+    categoryTotals,
+    comparison,
+    topCategory,
+    biggestExpense,
+    avgDailySpend,
+    highestSpendingDay,
+    dailyTrend,
+  } = buildDashboardData((rangeReceipts ?? []) as ReceiptRow[], now);
+  const latest = (latestReceipts ?? []) as ReceiptRow[];
 
   return (
     <div className="bg-muted/40 flex flex-1 justify-center px-6 py-10">
@@ -84,11 +114,21 @@ export default async function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <p className="text-muted-foreground text-sm">Total cheltuit luna aceasta</p>
-            <p className="text-foreground text-4xl font-semibold tabular-nums">
-              {monthTotal.toFixed(2)} lei
-            </p>
+            <MonthComparisonCard comparison={comparison} />
           </CardHeader>
+        </Card>
+
+        <TrendInsightCards
+          topCategory={topCategory}
+          biggestExpense={biggestExpense}
+          avgDailySpend={avgDailySpend}
+          highestSpendingDay={highestSpendingDay}
+        />
+
+        <Card>
+          <CardContent>
+            <SpendingTrendChart data={dailyTrend} />
+          </CardContent>
         </Card>
 
         <Card>
