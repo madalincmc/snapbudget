@@ -1,22 +1,62 @@
 # SnapBudget
 
-Track your expenses by photographing receipts — no manual entry. Snap a photo, OCR extracts the merchant, amount, and date, and the app auto-categorizes the spend.
+Track your expenses by photographing receipts — no manual entry. Snap a photo, OCR extracts the merchant, amount, and date, and the app auto-categorizes the spend. Expenses without a receipt (cash, parking, etc.) can be logged manually, and the dashboard surfaces month-over-month trends so spending patterns are visible at a glance, not just totals.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/login.jpg" alt="Sign in with Google" width="260"><br>
+      <sub>Sign in with Google</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/receipt-scan.jpg" alt="Photograph or upload a receipt" width="260"><br>
+      <sub>Photograph or upload a receipt</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/history.jpg" alt="Searchable, filterable expense history" width="260"><br>
+      <sub>Searchable, filterable history</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/dashboard-overview.jpg" alt="Dashboard: monthly comparison and trend insights" width="260"><br>
+      <sub>Monthly comparison & trend insights</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/dashboard-trend.jpg" alt="Dashboard: 30-day spending chart and category breakdown" width="260"><br>
+      <sub>30-day spending chart & category breakdown</sub>
+    </td>
+    <td width="33%"></td>
+  </tr>
+</table>
+
+## Features
+
+- **Receipt scanning** — photograph or upload a receipt; Google Vision OCR extracts merchant, amount, and date, and the spend is auto-categorized.
+- **Manual expenses** — log cash, parking, and other receipt-less spending directly.
+- **Dashboard insights** — current vs. previous month comparison, top category, biggest expense, average daily spend, highest-spending day, and a 30-day spending chart.
+- **Category breakdown** — spending by category for the current month, with a searchable category/subcategory picker when logging an expense.
+- **History** — search, filter (category, month), and sort every expense, receipt or manual.
+- **Google sign-in** — auth via Supabase, no separate SnapBudget password.
 
 ## Stack
 
 - **Frontend**: Next.js (App Router) + TypeScript + Tailwind CSS
 - **Backend & DB**: Supabase (Postgres + Auth + Storage)
 - **OCR**: Google Vision API
-- **Payments**: Stripe
+- **Payments**: Stripe — env vars are scaffolded (see below) but billing isn't wired into the product yet
 - **Hosting**: Vercel
 
 ## Project structure
 
 ```
-app/         # Next.js App Router routes
-components/  # Reusable UI components
-lib/         # Client libraries, server utilities, integrations (Supabase, Stripe, OCR)
-types/       # Shared TypeScript types
+app/             # Next.js App Router routes
+components/      # Reusable UI components
+lib/             # Client libraries, server utilities, integrations (Supabase, OCR)
+types/           # Shared TypeScript types
+docs/screenshots/  # Images used in this README
 ```
 
 ## Local setup
