@@ -22,10 +22,23 @@ export default async function NewReceiptPage() {
         <p className="text-muted-foreground">Fotografiază bonul sau alege o poză din galerie.</p>
       </div>
       <ReceiptUploadForm userId={user.id} />
-      <Button variant="link" nativeButton={false} render={<Link href="/dashboard" />}>
-        <ArrowLeft />
-        Înapoi la dashboard
-      </Button>
+
+      <div className="flex flex-col items-center gap-1">
+        {/* The bottom-nav button goes straight to scanning, so cash and other
+            receipt-less spending needs a visible way out from here. */}
+        <Button variant="link" nativeButton={false} render={<Link href="/expenses/new" />}>
+          Nu ai bon? Adaugă manual
+        </Button>
+        <Button
+          variant="link"
+          className="text-muted-foreground"
+          nativeButton={false}
+          render={<Link href="/dashboard" />}
+        >
+          <ArrowLeft />
+          Înapoi la dashboard
+        </Button>
+      </div>
     </div>
   );
 }

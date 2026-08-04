@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { Search, Trash2 } from 'lucide-react';
 import { CATEGORIES } from '@/lib/categories';
 import { ManualBadge, StatusBadge, ReceiptThumbnail } from '@/components/receipt-badges';
+import { MemberChip } from '@/components/member-chip';
+import { formatListDate } from '@/lib/dashboard/format';
 import type { HouseholdMemberInfo } from '@/lib/household/membership';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -84,20 +86,33 @@ const SORT_ITEMS: Record<string, string> = Object.fromEntries(
   SORT_OPTIONS.map((o) => [o.value, o.label]),
 );
 
+export interface HistoryFilters {
+  q?: string;
+  category?: string;
+  month?: string;
+  year?: string;
+  sort?: string;
+  who?: string;
+}
+
 export function HistoryList({
   members = [],
   meUserId,
+  initial = {},
 }: {
   members?: HouseholdMemberInfo[];
   meUserId?: string;
+  /** Seeded from the URL by the page, so filters survive editing a receipt
+   *  and coming back — and so a filtered view can be shared or bookmarked. */
+  initial?: HistoryFilters;
 }) {
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [category, setCategory] = useState('all');
-  const [month, setMonth] = useState('all');
-  const [year, setYear] = useState(String(CURRENT_YEAR));
-  const [sort, setSort] = useState('date_desc');
-  const [who, setWho] = useState('all');
+  const [search, setSearch] = useState(initial.q ?? '');
+  const [debouncedSearch, setDebouncedSearch] = useState(initial.q ?? '');
+  const [category, setCategory] = useState(initial.category ?? 'all');
+  const [month, setMonth] = useState(initial.month ?? 'all');
+  const [year, setYear] = useState(initial.year ?? String(CURRENT_YEAR));
+  const [sort, setSort] = useState(initial.sort ?? 'date_desc');
+  const [who, setWho] = useState(initial.who ?? 'all');
 
   const [receipts, setReceipts] = useState<HistoryReceipt[]>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -105,6 +120,38 @@ export function HistoryList({
   const [error, setError] = useState<string | null>(null);
 
   const creators = Object.fromEntries(members.map((m) => [m.userId, m.displayName]));
+
+  const hasActiveFilters =
+    debouncedSearch !== '' || category !== 'all' || month !== 'all' || who !== 'all';
+
+  function resetFilters() {
+    setSearch('');
+    setCategory('all');
+    setMonth('all');
+    setWho('all');
+  }
+
+  /** Non-default filters only, so a clean view keeps a clean URL. */
+  const filterParams = new URLSearchParams();
+  if (debouncedSearch) filterParams.set('q', debouncedSearch);
+  if (category !== 'all') filterParams.set('category', category);
+  if (month !== 'all') {
+    filterParams.set('month', month);
+    filterParams.set('year', year);
+  }
+  if (sort !== 'date_desc') filterParams.set('sort', sort);
+  if (who !== 'all') filterParams.set('who', who);
+  const filterQuery = filterParams.toString();
+
+  useEffect(() => {
+    // replaceState rather than router.replace: this only needs to keep the
+    // address bar in step, and a Next navigation here would retrigger the
+    // fetch effect below on every keystroke.
+    const url = filterQuery ? `${window.location.pathname}?${filterQuery}` : window.location.pathname;
+    window.history.replaceState(null, '', url);
+  }, [filterQuery]);
+
+  const returnTo = `/history${filterQuery ? `?${filterQuery}` : ''}`;
 
   const WHO_ITEMS: Record<string, string> = {
     all: 'Toți',
@@ -160,24 +207,26 @@ export function HistoryList({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <div className="relative flex-1 sm:min-w-48">
-          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
-          <Input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Caută după comerciant…"
-            className="h-9 pl-8"
-          />
-        </div>
+      <div className="relative">
+        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
+        <Input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Caută după comerciant…"
+          className="h-9 pl-8"
+        />
+      </div>
 
+      {/* One scrollable row rather than a stack of full-width selects: four
+          stacked dropdowns pushed every result below the fold on a phone. */}
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <Select
           items={CATEGORY_ITEMS}
           value={category}
           onValueChange={(value) => setCategory(value ?? 'all')}
         >
-          <SelectTrigger className="w-full sm:w-auto">
+          <SelectTrigger className="h-9 w-auto flex-none whitespace-nowrap">
             <SelectValue placeholder="Categorie" />
           </SelectTrigger>
           <SelectContent>
@@ -195,7 +244,7 @@ export function HistoryList({
           value={month}
           onValueChange={(value) => setMonth(value ?? 'all')}
         >
-          <SelectTrigger className="w-full sm:w-auto">
+          <SelectTrigger className="h-9 w-auto flex-none whitespace-nowrap">
             <SelectValue placeholder="Lună" />
           </SelectTrigger>
           <SelectContent>
@@ -210,7 +259,7 @@ export function HistoryList({
 
         {month !== 'all' && (
           <Select value={year} onValueChange={(value) => setYear(value ?? String(CURRENT_YEAR))}>
-            <SelectTrigger className="w-full sm:w-auto">
+            <SelectTrigger className="h-9 w-auto flex-none whitespace-nowrap">
               <SelectValue placeholder="An" />
             </SelectTrigger>
             <SelectContent>
@@ -228,7 +277,7 @@ export function HistoryList({
           value={sort}
           onValueChange={(value) => setSort(value ?? 'date_desc')}
         >
-          <SelectTrigger className="w-full sm:w-auto">
+          <SelectTrigger className="h-9 w-auto flex-none whitespace-nowrap">
             <SelectValue placeholder="Sortare" />
           </SelectTrigger>
           <SelectContent>
@@ -242,7 +291,7 @@ export function HistoryList({
 
         {members.length > 1 && (
           <Select items={WHO_ITEMS} value={who} onValueChange={(value) => setWho(value ?? 'all')}>
-            <SelectTrigger className="w-full sm:w-auto">
+            <SelectTrigger className="h-9 w-auto flex-none whitespace-nowrap">
               <SelectValue placeholder="Cine" />
             </SelectTrigger>
             <SelectContent>
@@ -260,10 +309,25 @@ export function HistoryList({
 
       {!loading && receipts.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-16 text-center">
-          <p className="text-muted-foreground text-sm">Niciun bon găsit.</p>
-          <Button nativeButton={false} render={<Link href="/receipts/new" />}>
-            Adaugă primul bon
-          </Button>
+          {/* "Add your first receipt" is wrong when the user has plenty and the
+              filters simply excluded them — offer to clear them instead. */}
+          {hasActiveFilters ? (
+            <>
+              <p className="text-muted-foreground text-sm">
+                Nicio cheltuială pentru filtrele alese.
+              </p>
+              <Button variant="outline" onClick={resetFilters}>
+                Șterge filtrele
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="text-muted-foreground text-sm">Nicio cheltuială încă.</p>
+              <Button nativeButton={false} render={<Link href="/receipts/new" />}>
+                Adaugă primul bon
+              </Button>
+            </>
+          )}
         </div>
       ) : (
         <ul className="divide-border flex flex-col divide-y">
@@ -271,15 +335,20 @@ export function HistoryList({
             <li key={r.id} className="flex items-center gap-3 py-3">
               <ReceiptThumbnail source={r.source} thumbnailUrl={r.thumbnailUrl} />
 
-              <Link href={`/receipts/${r.id}`} className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="text-foreground flex items-center gap-2 text-sm font-medium">
+              <Link
+                href={`/receipts/${r.id}?from=${encodeURIComponent(returnTo)}`}
+                className="flex min-w-0 flex-1 flex-col gap-0.5"
+              >
+                <span className="text-foreground flex items-center gap-1.5 text-sm font-medium">
                   <span className="truncate">{r.merchant ?? 'Bon fără nume'}</span>
+                  {meUserId && r.user_id !== meUserId && (
+                    <MemberChip name={creators[r.user_id] ?? null} />
+                  )}
                   {r.source === 'manual' && <ManualBadge />}
                 </span>
                 <span className="text-muted-foreground text-xs">
-                  {(r.purchase_date ?? r.created_at).slice(0, 10)}
+                  {formatListDate(r.purchase_date ?? r.created_at)}
                   {r.amount !== null && ` · ${r.subcategory ?? r.category ?? 'Altele'}`}
-                  {meUserId && r.user_id !== meUserId && ` · ${creators[r.user_id] ?? 'Membru'}`}
                 </span>
               </Link>
 

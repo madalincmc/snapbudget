@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { History, LogOut, Plus, Receipt, Users } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import {
   buildDashboardData,
@@ -16,6 +15,8 @@ import { SpendingTrendChart } from '@/components/spending-trend-chart';
 import { ReceiptsList } from '@/components/receipts-list';
 import { HouseholdFilter } from '@/components/household-filter';
 import { PendingInvitationsBanner } from '@/components/pending-invitations-banner';
+import { DashboardEmptyState } from '@/components/dashboard-empty-state';
+import { BottomNav, BOTTOM_NAV_SPACER } from '@/components/bottom-nav';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { signOut } from './actions';
@@ -76,8 +77,7 @@ export default async function DashboardPage({
 
   // Only "all" (no filter beyond RLS), "me", or a real co-member id are valid —
   // anything else falls back to "all" rather than silently no-op filtering.
-  const validWho =
-    who === 'me' || (who && members.some((m) => m.userId === who)) ? who : null;
+  const validWho = who === 'me' || (who && members.some((m) => m.userId === who)) ? who : null;
 
   const now = new Date();
   const rangeStart = dashboardRangeStart(now);
@@ -99,7 +99,7 @@ export default async function DashboardPage({
     .from('receipts')
     .select(RECEIPT_COLUMNS)
     .order('created_at', { ascending: false })
-    .limit(10);
+    .limit(5);
 
   const targetUserId = validWho === 'me' ? user.id : validWho;
   if (targetUserId) {
@@ -107,117 +107,88 @@ export default async function DashboardPage({
     latestQuery = latestQuery.eq('user_id', targetUserId);
   }
 
-  const [{ data: rangeReceipts }, { data: latestReceipts }] = await Promise.all([
-    rangeQuery,
-    latestQuery,
-  ]);
+  // Counts rows without fetching them — distinguishes "brand new account" from
+  // "nothing this month", which otherwise look identical (all zeros).
+  const totalCountQuery = supabase
+    .from('receipts')
+    .select('id', { count: 'exact', head: true })
+    .limit(1);
 
-  const {
-    categoryTotals,
-    comparison,
-    topCategory,
-    biggestExpense,
-    avgDailySpend,
-    highestSpendingDay,
-    dailyTrend,
-  } = buildDashboardData((rangeReceipts ?? []) as ReceiptRow[], now);
+  const [{ data: rangeReceipts }, { data: latestReceipts }, { count: totalReceipts }] =
+    await Promise.all([rangeQuery, latestQuery, totalCountQuery]);
+
+  const { categoryTotals, comparison, topCategory, biggestExpense, avgDailySpend, dailyTrend } =
+    buildDashboardData((rangeReceipts ?? []) as ReceiptRow[], now);
   const latest = (latestReceipts ?? []) as ReceiptRow[];
+  const hasAnyExpense = (totalReceipts ?? 0) > 0;
 
   return (
-    <div className="bg-muted/40 flex flex-1 justify-center px-6 py-10">
-      <div className="flex w-full max-w-lg flex-col gap-6">
-        <header className="flex items-center justify-between">
-          <div>
-            <p className="text-muted-foreground text-sm">Salut,</p>
-            <h1 className="text-foreground text-xl font-semibold">
-              {user.user_metadata.full_name ?? user.email}
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" nativeButton={false} render={<Link href="/household" />}>
-              <Users />
-              <span className="sr-only">Gospodărie</span>
-            </Button>
+    <div className={`bg-muted/40 flex flex-1 justify-center px-4 pt-6 ${BOTTOM_NAV_SPACER}`}>
+      <div className="flex w-full max-w-lg flex-col gap-4">
+        <header className="flex items-center justify-between gap-2 px-1">
+          <h1 className="text-foreground truncate text-lg font-semibold">
+            Salut, {user.user_metadata.full_name?.split(' ')[0] ?? user.email}
+          </h1>
+          <form action={signOut}>
             <Button
+              type="submit"
               variant="ghost"
               size="icon"
-              nativeButton={false}
-              render={<Link href="/history" />}
+              className="text-muted-foreground flex-none"
             >
-              <History />
-              <span className="sr-only">Istoric</span>
+              <LogOut />
+              <span className="sr-only">Deconectare</span>
             </Button>
-            <form action={signOut}>
-              <Button type="submit" variant="outline">
-                <LogOut />
-                Deconectare
-              </Button>
-            </form>
-          </div>
+          </form>
         </header>
 
         <PendingInvitationsBanner invitations={pendingInvitations} />
 
-        <div className="flex gap-3">
-          <Button
-            size="lg"
-            className="h-12 flex-1 rounded-full"
-            nativeButton={false}
-            render={<Link href="/receipts/new" />}
-          >
-            <Receipt />
-            Adaugă bon
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            className="h-12 flex-1 rounded-full"
-            nativeButton={false}
-            render={<Link href="/expenses/new" />}
-          >
-            <Plus />
-            Cheltuială manuală
-          </Button>
-        </div>
+        {!hasAnyExpense ? (
+          <DashboardEmptyState />
+        ) : (
+          <>
+            {members.length > 1 && (
+              <div className="flex items-center justify-end gap-2 px-1">
+                <span className="text-muted-foreground text-xs">Cheltuieli:</span>
+                <HouseholdFilter members={members} meUserId={user.id} />
+              </div>
+            )}
 
-        {members.length > 1 && (
-          <div className="flex items-center justify-end gap-2">
-            <span className="text-muted-foreground text-xs">Cheltuieli:</span>
-            <HouseholdFilter members={members} meUserId={user.id} />
-          </div>
+            <Card>
+              <CardHeader>
+                <MonthComparisonCard
+                  comparison={comparison}
+                  avgDailySpend={avgDailySpend}
+                  now={now}
+                />
+              </CardHeader>
+            </Card>
+
+            <TrendInsightCards topCategory={topCategory} biggestExpense={biggestExpense} />
+
+            <Card>
+              <CardContent>
+                <CategoryBreakdown categoryTotals={categoryTotals} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent>
+                <SpendingTrendChart data={dailyTrend} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent>
+                <ReceiptsList receipts={latest} meUserId={user.id} creators={creators} />
+              </CardContent>
+            </Card>
+          </>
         )}
-
-        <Card>
-          <CardHeader>
-            <MonthComparisonCard comparison={comparison} />
-          </CardHeader>
-        </Card>
-
-        <TrendInsightCards
-          topCategory={topCategory}
-          biggestExpense={biggestExpense}
-          avgDailySpend={avgDailySpend}
-          highestSpendingDay={highestSpendingDay}
-        />
-
-        <Card>
-          <CardContent>
-            <SpendingTrendChart data={dailyTrend} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <CategoryBreakdown categoryTotals={categoryTotals} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <ReceiptsList receipts={latest} meUserId={user.id} creators={creators} />
-          </CardContent>
-        </Card>
       </div>
+
+      <BottomNav />
     </div>
   );
 }

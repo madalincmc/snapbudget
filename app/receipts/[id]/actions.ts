@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { CATEGORIES, isSubcategoryOf, type Category } from '@/lib/categories';
+import { returnPathFor } from '@/lib/receipts/return-path';
 
 export async function updateReceipt(id: string, formData: FormData) {
   const supabase = await createClient();
@@ -49,6 +50,8 @@ export async function updateReceipt(id: string, formData: FormData) {
     throw new Error(error.message);
   }
 
+  const destination = returnPathFor(String(formData.get('from') ?? '') || undefined);
   revalidatePath('/dashboard');
-  redirect('/dashboard');
+  revalidatePath('/history');
+  redirect(destination);
 }

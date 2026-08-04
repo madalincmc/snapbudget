@@ -7,10 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CategoryPicker } from '@/components/category-picker';
+import { returnPathFor } from '@/lib/receipts/return-path';
 import { updateReceipt } from './actions';
 
-export default async function ReceiptDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ReceiptDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
+}) {
   const { id } = await params;
+  const { from } = await searchParams;
+  const backHref = returnPathFor(from);
   const supabase = await createClient();
 
   const {
@@ -43,10 +52,10 @@ export default async function ReceiptDetailPage({ params }: { params: Promise<{ 
           variant="link"
           className="self-start px-0"
           nativeButton={false}
-          render={<Link href="/dashboard" />}
+          render={<Link href={backHref} />}
         >
           <ArrowLeft />
-          Înapoi la dashboard
+          {backHref === '/history' ? 'Înapoi la istoric' : 'Înapoi la dashboard'}
         </Button>
 
         <h1 className="text-foreground text-xl font-semibold">Detalii bon</h1>
@@ -61,6 +70,7 @@ export default async function ReceiptDetailPage({ params }: { params: Promise<{ 
         )}
 
         <form action={updateReceiptWithId} className="flex flex-col gap-4">
+          <input type="hidden" name="from" value={from ?? ''} />
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="merchant">Comerciant</Label>
             <Input id="merchant" name="merchant" defaultValue={receipt.merchant ?? ''} />

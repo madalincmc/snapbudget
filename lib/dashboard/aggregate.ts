@@ -44,7 +44,6 @@ export interface DashboardData {
   topCategory: CategoryTotal | null;
   biggestExpense: BiggestExpense | null;
   avgDailySpend: number;
-  highestSpendingDay: DailySpend | null;
   /** Daily totals for the last 30 days (oldest first), zero-filled for days with no spending. */
   dailyTrend: DailySpend[];
 }
@@ -136,18 +135,6 @@ export function buildDashboardData(receipts: ReceiptRow[], now = new Date()): Da
   const daysElapsed = now.getDate();
   const avgDailySpend = daysElapsed > 0 ? monthTotal / daysElapsed : 0;
 
-  const currentMonthDayTotals = new Map<string, number>();
-  for (const r of monthly) {
-    const key = dayKeyOf(r);
-    currentMonthDayTotals.set(key, (currentMonthDayTotals.get(key) ?? 0) + (r.amount ?? 0));
-  }
-  let highestSpendingDay: DailySpend | null = null;
-  for (const [date, total] of currentMonthDayTotals) {
-    if (!highestSpendingDay || total > highestSpendingDay.total) {
-      highestSpendingDay = { date, total };
-    }
-  }
-
   const dailyTrendMap = new Map<string, number>();
   const orderedDays: string[] = [];
   for (let i = 29; i >= 0; i--) {
@@ -171,7 +158,6 @@ export function buildDashboardData(receipts: ReceiptRow[], now = new Date()): Da
     topCategory,
     biggestExpense,
     avgDailySpend,
-    highestSpendingDay,
     dailyTrend,
   };
 }
