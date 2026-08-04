@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import type { ReceiptRow } from '@/lib/dashboard/aggregate';
 import { formatListDate } from '@/lib/dashboard/format';
-import { ManualBadge, StatusBadge, ReceiptThumbnail } from '@/components/receipt-badges';
+import { SourceBadge, StatusBadge, ReceiptThumbnail } from '@/components/receipt-badges';
 import { MemberChip } from '@/components/member-chip';
 
 interface CreatorInfo {
@@ -53,7 +53,7 @@ export function ReceiptsList({
                     <span className="text-foreground flex items-center gap-1.5 text-sm font-medium">
                       <span className="truncate">{r.merchant ?? 'Bon fără nume'}</span>
                       {isOther && <MemberChip name={creatorName} />}
-                      {r.source === 'manual' && <ManualBadge />}
+                      <SourceBadge source={r.source} />
                     </span>
                     <span className="text-muted-foreground text-xs">
                       {formatListDate(r.purchase_date ?? r.created_at)}

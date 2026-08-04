@@ -16,6 +16,7 @@ import { ReceiptsList } from '@/components/receipts-list';
 import { HouseholdFilter } from '@/components/household-filter';
 import { PendingInvitationsBanner } from '@/components/pending-invitations-banner';
 import { DashboardEmptyState } from '@/components/dashboard-empty-state';
+import { RecurringSummaryCard, type RecurringSummary } from '@/components/recurring-summary-card';
 import { BottomNav, BOTTOM_NAV_SPACER } from '@/components/bottom-nav';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -114,8 +115,31 @@ export default async function DashboardPage({
     .select('id', { count: 'exact', head: true })
     .limit(1);
 
-  const [{ data: rangeReceipts }, { data: latestReceipts }, { count: totalReceipts }] =
-    await Promise.all([rangeQuery, latestQuery, totalCountQuery]);
+  // Active rules only, soonest first — the card shows what is coming next.
+  const recurringQuery = supabase
+    .from('recurring_expenses')
+    .select('title, amount, next_due_date', { count: 'exact' })
+    .eq('paused', false)
+    .order('next_due_date', { ascending: true })
+    .limit(1);
+
+  const [
+    { data: rangeReceipts },
+    { data: latestReceipts },
+    { count: totalReceipts },
+    { data: nextRecurring, count: activeRecurringCount },
+  ] = await Promise.all([rangeQuery, latestQuery, totalCountQuery, recurringQuery]);
+
+  const recurringSummary: RecurringSummary = {
+    activeCount: activeRecurringCount ?? 0,
+    next: nextRecurring?.[0]
+      ? {
+          title: nextRecurring[0].title,
+          amount: Number(nextRecurring[0].amount),
+          nextDueDate: nextRecurring[0].next_due_date,
+        }
+      : null,
+  };
 
   const { categoryTotals, comparison, topCategory, biggestExpense, avgDailySpend, dailyTrend } =
     buildDashboardData((rangeReceipts ?? []) as ReceiptRow[], now);
@@ -184,6 +208,8 @@ export default async function DashboardPage({
                 <ReceiptsList receipts={latest} meUserId={user.id} creators={creators} />
               </CardContent>
             </Card>
+
+            <RecurringSummaryCard summary={recurringSummary} />
           </>
         )}
       </div>
