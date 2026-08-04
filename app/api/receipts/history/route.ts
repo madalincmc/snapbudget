@@ -28,13 +28,21 @@ export async function GET(request: Request) {
   const month = searchParams.get('month') ?? '';
   const sort = searchParams.get('sort') ?? 'date_desc';
   const offset = Math.max(0, Number(searchParams.get('offset') ?? '0') || 0);
+  const who = searchParams.get('who') ?? '';
 
   let query = supabase
     .from('receipts')
     .select(
-      'id, merchant, amount, purchase_date, category, subcategory, status, source, storage_path, created_at',
+      'id, user_id, merchant, amount, purchase_date, category, subcategory, status, source, storage_path, created_at',
       { count: 'exact' },
     );
+
+  if (who === 'me') {
+    query = query.eq('user_id', user.id);
+  } else if (who) {
+    // Any other id is trusted to RLS: a non-co-member id just yields zero rows.
+    query = query.eq('user_id', who);
+  }
 
   if (q) {
     query = query.ilike('merchant', `%${q}%`);

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { getHouseholdMembership, type HouseholdMemberInfo } from '@/lib/household/membership';
 import { HistoryList } from '@/components/history-list';
 import { Button } from '@/components/ui/button';
 
@@ -13,6 +14,20 @@ export default async function HistoryPage() {
 
   if (!user) {
     redirect('/login');
+  }
+
+  const membership = await getHouseholdMembership(supabase, user.id);
+  let members: HouseholdMemberInfo[] = [];
+  if (membership) {
+    const { data } = await supabase
+      .from('household_members')
+      .select('user_id, display_name, avatar_url')
+      .eq('household_id', membership.householdId);
+    members = (data ?? []).map((m) => ({
+      userId: m.user_id,
+      displayName: m.display_name,
+      avatarUrl: m.avatar_url,
+    }));
   }
 
   return (
@@ -31,7 +46,7 @@ export default async function HistoryPage() {
           </Button>
         </div>
 
-        <HistoryList />
+        <HistoryList members={members} meUserId={user.id} />
       </div>
     </div>
   );
