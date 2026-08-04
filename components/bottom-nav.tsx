@@ -57,6 +57,3 @@ export function BottomNav() {
     </>
   );
 }
-
-/** Bottom padding so page content is never hidden behind the fixed nav. */
-export const BOTTOM_NAV_SPACER = 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]';

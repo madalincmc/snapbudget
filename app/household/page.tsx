@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { Crown, Mail, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { BottomNav, BOTTOM_NAV_SPACER } from '@/components/bottom-nav';
+import { BottomNav } from '@/components/bottom-nav';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -55,7 +55,7 @@ export default async function HouseholdPage() {
 
   if (!membership) {
     return (
-      <div className={`bg-muted/40 flex flex-1 justify-center px-4 pt-6 ${BOTTOM_NAV_SPACER}`}>
+      <div className="bg-muted/40 pb-nav flex flex-1 justify-center px-4 pt-6">
         <div className="flex w-full max-w-lg flex-col gap-4">
           {header}
           <Card>
@@ -108,7 +108,7 @@ export default async function HouseholdPage() {
     : { data: [] };
 
   return (
-    <div className={`bg-muted/40 flex flex-1 justify-center px-4 pt-6 ${BOTTOM_NAV_SPACER}`}>
+    <div className="bg-muted/40 pb-nav flex flex-1 justify-center px-4 pt-6">
       <div className="flex w-full max-w-lg flex-col gap-4">
         {header}
 

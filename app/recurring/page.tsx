@@ -4,7 +4,7 @@ import { ArrowLeft, Pause, Play, Plus, Repeat2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { formatListDate } from '@/lib/dashboard/format';
 import { FREQUENCY_LABEL, type RecurringExpense } from '@/lib/recurring';
-import { BottomNav, BOTTOM_NAV_SPACER } from '@/components/bottom-nav';
+import { BottomNav } from '@/components/bottom-nav';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -29,7 +29,7 @@ export default async function RecurringPage() {
   const rules = (data ?? []) as RecurringExpense[];
 
   return (
-    <div className={`bg-muted/40 flex flex-1 justify-center px-4 pt-6 ${BOTTOM_NAV_SPACER}`}>
+    <div className="bg-muted/40 pb-nav flex flex-1 justify-center px-4 pt-6">
       <div className="flex w-full max-w-lg flex-col gap-4">
         <div className="flex items-center justify-between gap-2 px-1">
           <h1 className="text-foreground text-lg font-semibold">Cheltuieli recurente</h1>
