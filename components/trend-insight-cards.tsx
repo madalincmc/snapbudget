@@ -2,26 +2,7 @@ import type * as React from 'react';
 import { CalendarDays, Crown, Flame, Receipt } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import type { BiggestExpense, CategoryTotal, DailySpend } from '@/lib/dashboard/aggregate';
-
-const MONTH_SHORT = [
-  'ian',
-  'feb',
-  'mar',
-  'apr',
-  'mai',
-  'iun',
-  'iul',
-  'aug',
-  'sep',
-  'oct',
-  'noi',
-  'dec',
-];
-
-function formatDayLabel(dateStr: string): string {
-  const [, month, day] = dateStr.split('-');
-  return `${Number(day)} ${MONTH_SHORT[Number(month) - 1]}`;
-}
+import { formatDayLabel } from '@/lib/dashboard/format';
 
 function InsightCard({
   icon,
