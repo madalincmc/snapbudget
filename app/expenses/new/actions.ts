@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { CATEGORIES, isSubcategoryOf, type Category } from '@/lib/categories';
+import { getHouseholdMembership } from '@/lib/household/membership';
 
 export async function createManualExpense(formData: FormData) {
   const supabase = await createClient();
@@ -37,8 +38,11 @@ export async function createManualExpense(formData: FormData) {
   const merchant = String(formData.get('merchant') ?? '').trim() || null;
   const notes = String(formData.get('notes') ?? '').trim() || null;
 
+  const membership = await getHouseholdMembership(supabase, user.id);
+
   const { error } = await supabase.from('receipts').insert({
     user_id: user.id,
+    household_id: membership?.householdId ?? null,
     storage_path: null,
     merchant,
     amount,

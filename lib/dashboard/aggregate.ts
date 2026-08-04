@@ -2,6 +2,7 @@ import { CATEGORIES, isCategory, type Category } from '@/lib/categories';
 
 export interface ReceiptRow {
   id: string;
+  user_id: string;
   merchant: string | null;
   amount: number | null;
   purchase_date: string | null;

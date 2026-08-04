@@ -73,9 +73,20 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
       return;
     }
 
+    const { data: membership } = await supabase
+      .from('household_members')
+      .select('household_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
     const { data: inserted, error: insertError } = await supabase
       .from('receipts')
-      .insert({ user_id: userId, storage_path: path, status: 'pending' })
+      .insert({
+        user_id: userId,
+        household_id: membership?.household_id ?? null,
+        storage_path: path,
+        status: 'pending',
+      })
       .select('id')
       .single();
 

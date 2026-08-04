@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Search, Trash2 } from 'lucide-react';
 import { CATEGORIES } from '@/lib/categories';
 import { ManualBadge, StatusBadge, ReceiptThumbnail } from '@/components/receipt-badges';
+import type { HouseholdMemberInfo } from '@/lib/household/membership';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,6 +29,7 @@ import {
 
 interface HistoryReceipt {
   id: string;
+  user_id: string;
   merchant: string | null;
   amount: number | null;
   purchase_date: string | null;
@@ -82,18 +84,35 @@ const SORT_ITEMS: Record<string, string> = Object.fromEntries(
   SORT_OPTIONS.map((o) => [o.value, o.label]),
 );
 
-export function HistoryList() {
+export function HistoryList({
+  members = [],
+  meUserId,
+}: {
+  members?: HouseholdMemberInfo[];
+  meUserId?: string;
+}) {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [month, setMonth] = useState('all');
   const [year, setYear] = useState(String(CURRENT_YEAR));
   const [sort, setSort] = useState('date_desc');
+  const [who, setWho] = useState('all');
 
   const [receipts, setReceipts] = useState<HistoryReceipt[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const creators = Object.fromEntries(members.map((m) => [m.userId, m.displayName]));
+
+  const WHO_ITEMS: Record<string, string> = {
+    all: 'Toți',
+    me: 'Eu',
+    ...Object.fromEntries(
+      members.filter((m) => m.userId !== meUserId).map((m) => [m.userId, m.displayName ?? 'Membru']),
+    ),
+  };
 
   useEffect(() => {
     const timeout = setTimeout(() => setDebouncedSearch(search), 300);
@@ -108,6 +127,7 @@ export function HistoryList() {
     if (debouncedSearch) params.set('q', debouncedSearch);
     if (category !== 'all') params.set('category', category);
     if (month !== 'all') params.set('month', `${year}-${month}`);
+    if (who !== 'all') params.set('who', who);
 
     try {
       const response = await fetch(`/api/receipts/history?${params.toString()}`);
@@ -129,7 +149,7 @@ export function HistoryList() {
     fetchPage(0, true);
     // fetchPage is stable across renders (reads current state via closure by design).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, category, month, year, sort]);
+  }, [debouncedSearch, category, month, year, sort, who]);
 
   async function handleDelete(id: string) {
     const response = await fetch(`/api/receipts/${id}`, { method: 'DELETE' });
@@ -219,6 +239,21 @@ export function HistoryList() {
             ))}
           </SelectContent>
         </Select>
+
+        {members.length > 1 && (
+          <Select items={WHO_ITEMS} value={who} onValueChange={(value) => setWho(value ?? 'all')}>
+            <SelectTrigger className="w-full sm:w-auto">
+              <SelectValue placeholder="Cine" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(WHO_ITEMS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {error && <p className="text-destructive text-sm">{error}</p>}
@@ -244,6 +279,7 @@ export function HistoryList() {
                 <span className="text-muted-foreground text-xs">
                   {(r.purchase_date ?? r.created_at).slice(0, 10)}
                   {r.amount !== null && ` · ${r.subcategory ?? r.category ?? 'Altele'}`}
+                  {meUserId && r.user_id !== meUserId && ` · ${creators[r.user_id] ?? 'Membru'}`}
                 </span>
               </Link>
 
