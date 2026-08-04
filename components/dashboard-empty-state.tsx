@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Camera, Plus, ScanLine } from 'lucide-react';
+import { Camera, Plus, Repeat2, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -35,6 +35,21 @@ export function DashboardEmptyState() {
           >
             <Plus />
             Sau adaugă manual
+          </Button>
+        </div>
+
+        {/* Recurring lives here too: the summary card that normally links to it
+            only renders once at least one expense exists, and setting up rent
+            or a subscription is a perfectly reasonable first thing to do. */}
+        <div className="mt-2 w-full max-w-xs border-t pt-4">
+          <Button
+            variant="ghost"
+            nativeButton={false}
+            render={<Link href="/recurring" />}
+            className="text-muted-foreground"
+          >
+            <Repeat2 />
+            Ai chirie sau abonamente? Adaugă-le o dată
           </Button>
         </div>
       </CardContent>

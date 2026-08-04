@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getHouseholdMembership, type HouseholdMemberInfo } from '@/lib/household/membership';
 import { HistoryList } from '@/components/history-list';
-import { BottomNav, BOTTOM_NAV_SPACER } from '@/components/bottom-nav';
+import { BottomNav } from '@/components/bottom-nav';
 
 export default async function HistoryPage({
   searchParams,
@@ -38,7 +38,7 @@ export default async function HistoryPage({
   }
 
   return (
-    <div className={`bg-muted/40 flex flex-1 justify-center px-4 pt-6 ${BOTTOM_NAV_SPACER}`}>
+    <div className="bg-muted/40 pb-nav flex flex-1 justify-center px-4 pt-6">
       <div className="flex w-full max-w-2xl flex-col gap-4">
         <h1 className="text-foreground px-1 text-lg font-semibold">Istoric</h1>
         <HistoryList

@@ -117,6 +117,17 @@
   }
 }
 
+@layer utilities {
+  /* Clears the fixed bottom nav (~61px) and the floating scan button above it
+     (which reaches ~128px up), plus the iOS home indicator. Defined as real
+     CSS rather than an arbitrary value exported from bottom-nav.tsx: that file
+     is a client module, and a server component interpolating a constant from
+     it stringifies a client-reference proxy into the class list instead. */
+  .pb-nav {
+    padding-bottom: calc(9rem + env(safe-area-inset-bottom));
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

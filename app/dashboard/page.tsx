@@ -17,7 +17,7 @@ import { HouseholdFilter } from '@/components/household-filter';
 import { PendingInvitationsBanner } from '@/components/pending-invitations-banner';
 import { DashboardEmptyState } from '@/components/dashboard-empty-state';
 import { RecurringSummaryCard, type RecurringSummary } from '@/components/recurring-summary-card';
-import { BottomNav, BOTTOM_NAV_SPACER } from '@/components/bottom-nav';
+import { BottomNav } from '@/components/bottom-nav';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { signOut } from './actions';
@@ -147,7 +147,7 @@ export default async function DashboardPage({
   const hasAnyExpense = (totalReceipts ?? 0) > 0;
 
   return (
-    <div className={`bg-muted/40 flex flex-1 justify-center px-4 pt-6 ${BOTTOM_NAV_SPACER}`}>
+    <div className="bg-muted/40 pb-nav flex flex-1 justify-center px-4 pt-6">
       <div className="flex w-full max-w-lg flex-col gap-4">
         <header className="flex items-center justify-between gap-2 px-1">
           <h1 className="text-foreground truncate text-lg font-semibold">
