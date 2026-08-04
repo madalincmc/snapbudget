@@ -9,6 +9,22 @@ export function ManualBadge() {
   );
 }
 
+export function RecurringBadge() {
+  return (
+    <Badge className="border-transparent bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+      Recurent
+    </Badge>
+  );
+}
+
+/** Badge for an expense's origin — nothing for a scanned receipt, which is
+ *  the default and needs no label. */
+export function SourceBadge({ source }: { source: string }) {
+  if (source === 'manual') return <ManualBadge />;
+  if (source === 'recurring') return <RecurringBadge />;
+  return null;
+}
+
 export function StatusBadge({ status }: { status: string }) {
   const isPending = status === 'pending';
   return (

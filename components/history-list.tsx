@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Search, Trash2 } from 'lucide-react';
 import { CATEGORIES } from '@/lib/categories';
-import { ManualBadge, StatusBadge, ReceiptThumbnail } from '@/components/receipt-badges';
+import { SourceBadge, StatusBadge, ReceiptThumbnail } from '@/components/receipt-badges';
 import { MemberChip } from '@/components/member-chip';
 import { formatListDate } from '@/lib/dashboard/format';
 import type { HouseholdMemberInfo } from '@/lib/household/membership';
@@ -344,7 +344,7 @@ export function HistoryList({
                   {meUserId && r.user_id !== meUserId && (
                     <MemberChip name={creators[r.user_id] ?? null} />
                   )}
-                  {r.source === 'manual' && <ManualBadge />}
+                  <SourceBadge source={r.source} />
                 </span>
                 <span className="text-muted-foreground text-xs">
                   {formatListDate(r.purchase_date ?? r.created_at)}
