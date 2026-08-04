@@ -1,6 +1,9 @@
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import type { ReceiptRow } from '@/lib/dashboard/aggregate';
+import { formatListDate } from '@/lib/dashboard/format';
 import { ManualBadge, StatusBadge, ReceiptThumbnail } from '@/components/receipt-badges';
+import { MemberChip } from '@/components/member-chip';
 
 interface CreatorInfo {
   displayName: string | null;
@@ -17,31 +20,44 @@ export function ReceiptsList({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-muted-foreground text-sm font-medium">Ultimele bonuri</h2>
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-muted-foreground text-sm font-medium">Ultimele cheltuieli</h2>
+        {receipts.length > 0 && (
+          <Link
+            href="/history"
+            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs transition-colors"
+          >
+            Vezi tot
+            <ArrowRight className="h-3 w-3" />
+          </Link>
+        )}
+      </div>
+
       {receipts.length === 0 ? (
-        <p className="text-muted-foreground text-sm">Niciun bon încă.</p>
+        <p className="text-muted-foreground text-sm">Nicio cheltuială încă.</p>
       ) : (
         <ul className="divide-border flex flex-col divide-y">
           {receipts.map((r) => {
             const creatorName =
-              meUserId && r.user_id !== meUserId ? creators?.[r.user_id]?.displayName : null;
+              meUserId && r.user_id !== meUserId ? (creators?.[r.user_id]?.displayName ?? null) : null;
+            const isOther = Boolean(meUserId && r.user_id !== meUserId);
 
             return (
               <li key={r.id}>
                 <Link
                   href={`/receipts/${r.id}`}
-                  className="hover:bg-muted/50 flex items-center gap-3 py-3 transition-colors"
+                  className="hover:bg-muted/50 -mx-2 flex items-center gap-3 rounded-lg px-2 py-3 transition-colors"
                 >
                   <ReceiptThumbnail source={r.source} />
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="text-foreground flex items-center gap-2 text-sm font-medium">
+                    <span className="text-foreground flex items-center gap-1.5 text-sm font-medium">
                       <span className="truncate">{r.merchant ?? 'Bon fără nume'}</span>
+                      {isOther && <MemberChip name={creatorName} />}
                       {r.source === 'manual' && <ManualBadge />}
                     </span>
                     <span className="text-muted-foreground text-xs">
-                      {(r.purchase_date ?? r.created_at).slice(0, 10)}
+                      {formatListDate(r.purchase_date ?? r.created_at)}
                       {r.amount !== null && ` · ${r.subcategory ?? r.category ?? 'Altele'}`}
-                      {creatorName && ` · ${creatorName}`}
                     </span>
                   </div>
                   {r.amount !== null ? (

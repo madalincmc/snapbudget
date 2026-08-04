@@ -18,16 +18,17 @@ export function SpendingTrendChart({ data }: { data: DailySpend[] }) {
   if (max <= 0) {
     return (
       <div className="flex flex-col gap-3">
-        <h2 className="text-muted-foreground text-sm font-medium">
-          Cheltuieli în ultimele 30 de zile
-        </h2>
+        <h2 className="text-muted-foreground text-sm font-medium">Ultimele 30 de zile</h2>
         <p className="text-muted-foreground text-sm">Nicio cheltuială în ultimele 30 de zile.</p>
       </div>
     );
   }
 
-  const total = data.reduce((sum, d) => sum + d.total, 0);
   const todayIndex = data.length - 1;
+  // The window spans two calendar months, so the bars are shaded by month:
+  // without that split the chart's own total looks like it contradicts the
+  // month total above it. "Current" is whichever month today falls in.
+  const currentMonth = data[todayIndex].date.slice(0, 7);
   const maxIndex = data.reduce((best, d, i) => (d.total > data[best].total ? i : best), 0);
   const labelIndex = activeIndex ?? maxIndex;
   const labelDay = data[labelIndex];
@@ -37,12 +38,13 @@ export function SpendingTrendChart({ data }: { data: DailySpend[] }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-muted-foreground text-sm font-medium">
-          Cheltuieli în ultimele 30 de zile
-        </h2>
-        <span className="text-muted-foreground text-xs tabular-nums">
-          Total {total.toFixed(2)} lei
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-muted-foreground text-sm font-medium">Ultimele 30 de zile</h2>
+        <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
+          <span className="bg-foreground/25 h-2 w-2 rounded-[2px]" />
+          {formatDayLabel(data[0].date).split(' ')[1]}
+          <span className="bg-foreground ml-1 h-2 w-2 rounded-[2px]" />
+          {formatDayLabel(data[todayIndex].date).split(' ')[1]}
         </span>
       </div>
 
@@ -51,7 +53,7 @@ export function SpendingTrendChart({ data }: { data: DailySpend[] }) {
           className="text-foreground pointer-events-none absolute top-0 text-[10px] font-medium whitespace-nowrap tabular-nums"
           style={{
             left: `${((labelIndex + 0.5) / data.length) * 100}%`,
-            transform: 'translateX(-50%)',
+            transform: `translateX(${labelIndex > data.length * 0.7 ? '-85%' : '-50%'})`,
           }}
         >
           {labelDay.total.toFixed(2)} lei
@@ -80,7 +82,8 @@ export function SpendingTrendChart({ data }: { data: DailySpend[] }) {
             const rawHeight = (d.total / max) * MAX_BAR_HEIGHT;
             const height = d.total > 0 ? Math.max(rawHeight, MIN_VISIBLE_HEIGHT) : 0;
             const x = i * slotWidth + (slotWidth - barWidth) / 2;
-            const isEmphasized = i === todayIndex || i === activeIndex;
+            const isCurrentMonth = d.date.slice(0, 7) === currentMonth;
+            const isActive = i === activeIndex || i === todayIndex;
 
             return (
               <g key={d.date}>
@@ -90,7 +93,13 @@ export function SpendingTrendChart({ data }: { data: DailySpend[] }) {
                   width={barWidth}
                   height={height}
                   rx={1.5}
-                  className={isEmphasized ? 'fill-foreground' : 'fill-foreground/30'}
+                  className={
+                    isActive
+                      ? 'fill-foreground'
+                      : isCurrentMonth
+                        ? 'fill-foreground/60'
+                        : 'fill-foreground/25'
+                  }
                 />
                 {/* Larger, transparent hit target so thin bars stay tappable on mobile. */}
                 <rect

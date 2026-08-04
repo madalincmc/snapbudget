@@ -36,7 +36,7 @@ Track your expenses by photographing receipts — no manual entry. Snap a photo,
 
 - **Receipt scanning** — photograph or upload a receipt; Google Vision OCR extracts merchant, amount, and date, and the spend is auto-categorized.
 - **Manual expenses** — log cash, parking, and other receipt-less spending directly.
-- **Dashboard insights** — current vs. previous month comparison, top category, biggest expense, average daily spend, highest-spending day, and a 30-day spending chart.
+- **Dashboard insights** — current vs. previous month comparison, average daily spend, top category, biggest expense, and a 30-day spending chart that shades the current month apart from the previous one.
 - **Category breakdown** — spending by category for the current month, with a searchable category/subcategory picker when logging an expense.
 - **History** — search, filter (category, month), and sort every expense, receipt or manual.
 - **Google sign-in** — auth via Supabase, no separate SnapBudget password.

@@ -1,12 +1,19 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getHouseholdMembership, type HouseholdMemberInfo } from '@/lib/household/membership';
 import { HistoryList } from '@/components/history-list';
-import { Button } from '@/components/ui/button';
+import { BottomNav, BOTTOM_NAV_SPACER } from '@/components/bottom-nav';
 
-export default async function HistoryPage() {
+export default async function HistoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const one = (key: string) => {
+    const value = params[key];
+    return typeof value === 'string' ? value : undefined;
+  };
   const supabase = await createClient();
   const {
     data: { user },
@@ -31,23 +38,23 @@ export default async function HistoryPage() {
   }
 
   return (
-    <div className="bg-muted/40 flex flex-1 justify-center px-6 py-10">
-      <div className="flex w-full max-w-2xl flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-foreground text-xl font-semibold">Istoric bonuri</h1>
-          <Button
-            variant="link"
-            className="px-0"
-            nativeButton={false}
-            render={<Link href="/dashboard" />}
-          >
-            <ArrowLeft />
-            Dashboard
-          </Button>
-        </div>
-
-        <HistoryList members={members} meUserId={user.id} />
+    <div className={`bg-muted/40 flex flex-1 justify-center px-4 pt-6 ${BOTTOM_NAV_SPACER}`}>
+      <div className="flex w-full max-w-2xl flex-col gap-4">
+        <h1 className="text-foreground px-1 text-lg font-semibold">Istoric</h1>
+        <HistoryList
+          members={members}
+          meUserId={user.id}
+          initial={{
+            q: one('q'),
+            category: one('category'),
+            month: one('month'),
+            year: one('year'),
+            sort: one('sort'),
+            who: one('who'),
+          }}
+        />
       </div>
+      <BottomNav />
     </div>
   );
 }

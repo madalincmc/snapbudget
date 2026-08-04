@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft, Crown, Mail, X } from 'lucide-react';
+import { Crown, Mail, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { BottomNav, BOTTOM_NAV_SPACER } from '@/components/bottom-nav';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -51,20 +51,12 @@ export default async function HouseholdPage() {
     .eq('user_id', user.id)
     .maybeSingle();
 
-  const header = (
-    <div className="flex items-center justify-between">
-      <h1 className="text-foreground text-xl font-semibold">Gospodărie</h1>
-      <Button variant="link" className="px-0" nativeButton={false} render={<Link href="/dashboard" />}>
-        <ArrowLeft />
-        Dashboard
-      </Button>
-    </div>
-  );
+  const header = <h1 className="text-foreground px-1 text-lg font-semibold">Gospodărie</h1>;
 
   if (!membership) {
     return (
-      <div className="bg-muted/40 flex flex-1 justify-center px-6 py-10">
-        <div className="flex w-full max-w-lg flex-col gap-6">
+      <div className={`bg-muted/40 flex flex-1 justify-center px-4 pt-6 ${BOTTOM_NAV_SPACER}`}>
+        <div className="flex w-full max-w-lg flex-col gap-4">
           {header}
           <Card>
             <CardHeader>
@@ -87,6 +79,7 @@ export default async function HouseholdPage() {
             </CardContent>
           </Card>
         </div>
+        <BottomNav />
       </div>
     );
   }
@@ -115,8 +108,8 @@ export default async function HouseholdPage() {
     : { data: [] };
 
   return (
-    <div className="bg-muted/40 flex flex-1 justify-center px-6 py-10">
-      <div className="flex w-full max-w-lg flex-col gap-6">
+    <div className={`bg-muted/40 flex flex-1 justify-center px-4 pt-6 ${BOTTOM_NAV_SPACER}`}>
+      <div className="flex w-full max-w-lg flex-col gap-4">
         {header}
 
         <Card>
@@ -253,6 +246,7 @@ export default async function HouseholdPage() {
           </Card>
         )}
       </div>
+      <BottomNav />
     </div>
   );
 }
