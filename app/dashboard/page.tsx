@@ -4,10 +4,18 @@ import { createClient } from '@/lib/supabase/server';
 import {
   buildDashboardData,
   dashboardRangeStart,
-  toDateString,
   type ReceiptRow,
 } from '@/lib/dashboard/aggregate';
+import { expensesSince, RECEIPT_COLUMNS } from '@/lib/dashboard/query';
 import { getHouseholdMembership, type HouseholdMemberInfo } from '@/lib/household/membership';
+import {
+  buildBudgetOverview,
+  parseBudgetRow,
+  scopeForView,
+  type Budget,
+  type BudgetRow,
+} from '@/lib/budgets';
+import { BudgetSummaryCard } from '@/components/budget-summary-card';
 import { CategoryBreakdown } from '@/components/category-breakdown';
 import { MonthComparisonCard } from '@/components/month-comparison-card';
 import { TrendInsightCards } from '@/components/trend-insight-cards';
@@ -21,9 +29,6 @@ import { BottomNav } from '@/components/bottom-nav';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { signOut } from './actions';
-
-const RECEIPT_COLUMNS =
-  'id, user_id, merchant, amount, purchase_date, category, subcategory, status, source, created_at';
 
 export default async function DashboardPage({
   searchParams,
@@ -81,21 +86,10 @@ export default async function DashboardPage({
   const validWho = who === 'me' || (who && members.some((m) => m.userId === who)) ? who : null;
 
   const now = new Date();
-  const rangeStart = dashboardRangeStart(now);
-  const rangeStartDateStr = toDateString(rangeStart);
-  const rangeStartISO = rangeStart.toISOString();
 
   // Covers the previous month + last 30 days, needed for the comparison card
-  // and trend chart. Manual/backdated entries without a purchase_date yet
-  // fall back to created_at, matching how buildDashboardData buckets them.
-  let rangeQuery = supabase
-    .from('receipts')
-    .select(RECEIPT_COLUMNS)
-    .eq('status', 'processed')
-    .or(
-      `purchase_date.gte.${rangeStartDateStr},and(purchase_date.is.null,created_at.gte.${rangeStartISO})`,
-    )
-    .limit(5000);
+  // and trend chart.
+  let rangeQuery = expensesSince(supabase, dashboardRangeStart(now));
   let latestQuery = supabase
     .from('receipts')
     .select(RECEIPT_COLUMNS)
@@ -123,12 +117,42 @@ export default async function DashboardPage({
     .order('next_due_date', { ascending: true })
     .limit(1);
 
+  // Budgets follow the current view rather than carrying their own switch:
+  // "Toate" compares against the household budget, "Eu" against the personal
+  // one. Viewing another member shows no budget — theirs is not yours to see,
+  // and yours does not describe their total.
+  const budgetScope = scopeForView(membership !== null, validWho ?? null);
+
+  // PromiseLike, not Promise: Supabase's query builder is a thenable, and
+  // `.then()` on it keeps that type rather than widening to a real Promise.
+  const budgetRowsPromise: PromiseLike<BudgetRow[]> =
+    budgetScope === null
+      ? Promise.resolve([])
+      : (budgetScope === 'household'
+          ? supabase
+              .from('budgets')
+              .select('id, household_id, category, amount')
+              .eq('household_id', membership!.householdId)
+          : supabase
+              .from('budgets')
+              .select('id, household_id, category, amount')
+              .is('household_id', null)
+              .eq('user_id', user.id)
+        ).then(({ data }) => (data ?? []) as BudgetRow[]);
+
   const [
     { data: rangeReceipts },
     { data: latestReceipts },
     { count: totalReceipts },
     { data: nextRecurring, count: activeRecurringCount },
-  ] = await Promise.all([rangeQuery, latestQuery, totalCountQuery, recurringQuery]);
+    budgetRows,
+  ] = await Promise.all([
+    rangeQuery,
+    latestQuery,
+    totalCountQuery,
+    recurringQuery,
+    budgetRowsPromise,
+  ]);
 
   const recurringSummary: RecurringSummary = {
     activeCount: activeRecurringCount ?? 0,
@@ -141,10 +165,20 @@ export default async function DashboardPage({
       : null,
   };
 
-  const { categoryTotals, comparison, topCategory, biggestExpense, avgDailySpend, dailyTrend } =
-    buildDashboardData((rangeReceipts ?? []) as ReceiptRow[], now);
+  const {
+    monthTotal,
+    categoryTotals,
+    comparison,
+    topCategory,
+    biggestExpense,
+    avgDailySpend,
+    dailyTrend,
+  } = buildDashboardData((rangeReceipts ?? []) as ReceiptRow[], now);
   const latest = (latestReceipts ?? []) as ReceiptRow[];
   const hasAnyExpense = (totalReceipts ?? 0) > 0;
+
+  const budgets = budgetRows.map(parseBudgetRow).filter((b): b is Budget => b !== null);
+  const budgetOverview = buildBudgetOverview(budgets, monthTotal, categoryTotals, now);
 
   return (
     <div className="bg-muted/40 pb-nav flex flex-1 justify-center px-4 pt-6">
@@ -189,11 +223,16 @@ export default async function DashboardPage({
               </CardHeader>
             </Card>
 
+            {budgetScope && <BudgetSummaryCard overview={budgetOverview} scope={budgetScope} />}
+
             <TrendInsightCards topCategory={topCategory} biggestExpense={biggestExpense} />
 
             <Card>
               <CardContent>
-                <CategoryBreakdown categoryTotals={categoryTotals} />
+                <CategoryBreakdown
+                  categoryTotals={categoryTotals}
+                  budgets={budgetOverview.byCategory}
+                />
               </CardContent>
             </Card>
 
