@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ArrowLeft, Target, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { CATEGORIES } from '@/lib/categories';
-import { buildDashboardData, type ReceiptRow } from '@/lib/dashboard/aggregate';
+import { buildDashboardData, monthKeyOf, type ReceiptRow } from '@/lib/dashboard/aggregate';
 import { expensesSince, startOfMonth } from '@/lib/dashboard/query';
 import { getHouseholdMembership } from '@/lib/household/membership';
 import {
@@ -73,7 +73,13 @@ export default async function BudgetsPage({
     .map(parseBudgetRow)
     .filter((b): b is Budget => b !== null);
 
-  const { monthTotal, categoryTotals } = buildDashboardData((spendRows ?? []) as ReceiptRow[], now);
+  // Budgets are always about the month in progress, so the period is `now`'s
+  // month rather than anything the URL could select.
+  const { monthTotal, categoryTotals } = buildDashboardData(
+    (spendRows ?? []) as ReceiptRow[],
+    monthKeyOf(now),
+    now,
+  );
   const overview = buildBudgetOverview(budgets, monthTotal, categoryTotals, now);
 
   const budgetedCategories = new Set(Object.keys(overview.byCategory));

@@ -1,22 +1,26 @@
 import { Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { monthName, previousMonthName } from '@/lib/dashboard/format';
+import { monthKeyLabel } from '@/lib/dashboard/format';
+import { shiftMonthKey, type MonthKey } from '@/lib/dashboard/aggregate';
 import type { MonthComparison } from '@/lib/dashboard/aggregate';
 
 export function MonthComparisonCard({
   comparison,
   avgDailySpend,
-  now = new Date(),
+  month,
+  isCurrentMonth,
 }: {
   comparison: MonthComparison;
   avgDailySpend: number;
-  now?: Date;
+  month: MonthKey;
+  isCurrentMonth: boolean;
 }) {
   const { currentTotal, previousTotal, percentChange, hasPreviousData, direction } = comparison;
+  const previousLabel = monthKeyLabel(shiftMonthKey(month, -1));
 
   return (
     <div className="flex flex-col gap-1">
-      <p className="text-muted-foreground text-sm">Cheltuit în {monthName(now)}</p>
+      <p className="text-muted-foreground text-sm">Cheltuit în {monthKeyLabel(month)}</p>
       {/* Proportional figures: tabular-nums pads every digit to the width of a
           zero, which reads visibly loose at display size. */}
       <p className="text-foreground text-[2.5rem] leading-none font-semibold">
@@ -39,12 +43,12 @@ export function MonthComparisonCard({
             {percentChange === null
               ? '—'
               : `${percentChange > 0 ? '+' : ''}${percentChange.toFixed(0)}%`}
-            <span className="text-muted-foreground font-normal">
-              față de {previousMonthName(now)}
-            </span>
+            <span className="text-muted-foreground font-normal">față de {previousLabel}</span>
           </span>
         ) : (
-          <span className="text-muted-foreground">Prima lună — nimic de comparat încă.</span>
+          <span className="text-muted-foreground">
+            {isCurrentMonth ? 'Prima lună — nimic de comparat încă.' : 'Nimic în luna anterioară.'}
+          </span>
         )}
 
         {currentTotal > 0 && (
@@ -61,7 +65,7 @@ export function MonthComparisonCard({
 
       {hasPreviousData && (
         <p className="text-muted-foreground/80 mt-0.5 text-xs tabular-nums">
-          {previousMonthName(now)}: {previousTotal.toFixed(2)} lei
+          {previousLabel}: {previousTotal.toFixed(2)} lei
         </p>
       )}
     </div>

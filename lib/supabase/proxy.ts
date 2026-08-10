@@ -1,7 +1,20 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PROTECTED_PREFIXES = ['/dashboard', '/receipts', '/expenses', '/history'];
+// Every signed-in route. Each page re-checks the session itself, so a missing
+// entry is not a hole — but it does cost the destination: without a match the
+// redirect carries no `next`, and signing in drops the user on the dashboard
+// instead of the page they asked for.
+const PROTECTED_PREFIXES = [
+  '/dashboard',
+  '/receipts',
+  '/expenses',
+  '/history',
+  '/household',
+  '/recurring',
+  '/budgets',
+  '/analytics',
+];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
