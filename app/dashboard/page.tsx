@@ -3,10 +3,12 @@ import { LogOut } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import {
   buildDashboardData,
-  dashboardRangeStart,
+  dashboardRange,
+  isMonthKey,
+  monthKeyOf,
   type ReceiptRow,
 } from '@/lib/dashboard/aggregate';
-import { expensesSince, RECEIPT_COLUMNS } from '@/lib/dashboard/query';
+import { expensesBetween, RECEIPT_COLUMNS } from '@/lib/dashboard/query';
 import { getHouseholdMembership, type HouseholdMemberInfo } from '@/lib/household/membership';
 import {
   buildBudgetOverview,
@@ -16,6 +18,8 @@ import {
   type BudgetRow,
 } from '@/lib/budgets';
 import { BudgetSummaryCard } from '@/components/budget-summary-card';
+import { AnalyticsSummaryCard } from '@/components/analytics-summary-card';
+import { MonthPicker } from '@/components/month-picker';
 import { CategoryBreakdown } from '@/components/category-breakdown';
 import { MonthComparisonCard } from '@/components/month-comparison-card';
 import { TrendInsightCards } from '@/components/trend-insight-cards';
@@ -33,7 +37,7 @@ import { signOut } from './actions';
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ who?: string }>;
+  searchParams: Promise<{ who?: string; month?: string }>;
 }) {
   const supabase = await createClient();
   const {
@@ -44,7 +48,7 @@ export default async function DashboardPage({
     redirect('/login');
   }
 
-  const { who } = await searchParams;
+  const { who, month: monthParam } = await searchParams;
 
   const membership = await getHouseholdMembership(supabase, user.id);
 
@@ -86,10 +90,18 @@ export default async function DashboardPage({
   const validWho = who === 'me' || (who && members.some((m) => m.userId === who)) ? who : null;
 
   const now = new Date();
+  const currentMonth = monthKeyOf(now);
 
-  // Covers the previous month + last 30 days, needed for the comparison card
-  // and trend chart.
-  let rangeQuery = expensesSince(supabase, dashboardRangeStart(now));
+  // A malformed or future month falls back to the current one rather than
+  // rendering an empty dashboard for a period that cannot have data.
+  const month = isMonthKey(monthParam) && monthParam <= currentMonth ? monthParam : currentMonth;
+  const isCurrentMonth = month === currentMonth;
+
+  // The selected month, the one before it for the comparison card, and — on the
+  // live month — the trailing 30 days the chart needs.
+  const { from, to } = dashboardRange(month, now);
+
+  let rangeQuery = expensesBetween(supabase, from, to);
   let latestQuery = supabase
     .from('receipts')
     .select(RECEIPT_COLUMNS)
@@ -121,7 +133,11 @@ export default async function DashboardPage({
   // "Toate" compares against the household budget, "Eu" against the personal
   // one. Viewing another member shows no budget — theirs is not yours to see,
   // and yours does not describe their total.
-  const budgetScope = scopeForView(membership !== null, validWho ?? null);
+  //
+  // Past months show none either. A budget row holds today's limit with no
+  // history behind it, so measuring July against it would compare spending to
+  // a number that may not have existed in July (see MAD-69, out of scope).
+  const budgetScope = isCurrentMonth ? scopeForView(membership !== null, validWho ?? null) : null;
 
   // PromiseLike, not Promise: Supabase's query builder is a thenable, and
   // `.then()` on it keeps that type rather than widening to a real Promise.
@@ -173,7 +189,7 @@ export default async function DashboardPage({
     biggestExpense,
     avgDailySpend,
     dailyTrend,
-  } = buildDashboardData((rangeReceipts ?? []) as ReceiptRow[], now);
+  } = buildDashboardData((rangeReceipts ?? []) as ReceiptRow[], month, now);
   const latest = (latestReceipts ?? []) as ReceiptRow[];
   const hasAnyExpense = (totalReceipts ?? 0) > 0;
 
@@ -206,19 +222,18 @@ export default async function DashboardPage({
           <DashboardEmptyState />
         ) : (
           <>
-            {members.length > 1 && (
-              <div className="flex items-center justify-end gap-2 px-1">
-                <span className="text-muted-foreground text-xs">Cheltuieli:</span>
-                <HouseholdFilter members={members} meUserId={user.id} />
-              </div>
-            )}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+              <MonthPicker month={month} currentMonth={currentMonth} />
+              {members.length > 1 && <HouseholdFilter members={members} meUserId={user.id} />}
+            </div>
 
             <Card>
               <CardHeader>
                 <MonthComparisonCard
                   comparison={comparison}
                   avgDailySpend={avgDailySpend}
-                  now={now}
+                  month={month}
+                  isCurrentMonth={isCurrentMonth}
                 />
               </CardHeader>
             </Card>
@@ -238,17 +253,29 @@ export default async function DashboardPage({
 
             <Card>
               <CardContent>
-                <SpendingTrendChart data={dailyTrend} />
+                <SpendingTrendChart
+                  data={dailyTrend}
+                  month={month}
+                  isCurrentMonth={isCurrentMonth}
+                />
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent>
-                <ReceiptsList receipts={latest} meUserId={user.id} creators={creators} />
-              </CardContent>
-            </Card>
+            <AnalyticsSummaryCard />
 
-            <RecurringSummaryCard summary={recurringSummary} />
+            {/* Recent activity and upcoming bills describe now, not the month
+                being browsed — they would be misleading under a past month. */}
+            {isCurrentMonth && (
+              <>
+                <Card>
+                  <CardContent>
+                    <ReceiptsList receipts={latest} meUserId={user.id} creators={creators} />
+                  </CardContent>
+                </Card>
+
+                <RecurringSummaryCard summary={recurringSummary} />
+              </>
+            )}
           </>
         )}
       </div>

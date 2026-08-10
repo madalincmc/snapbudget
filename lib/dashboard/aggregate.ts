@@ -44,20 +44,58 @@ export interface DashboardData {
   topCategory: CategoryTotal | null;
   biggestExpense: BiggestExpense | null;
   avgDailySpend: number;
-  /** Daily totals for the last 30 days (oldest first), zero-filled for days with no spending. */
+  /** Zero-filled daily totals: a rolling 30 days for the current month, or every day of a past one. */
   dailyTrend: DailySpend[];
+  /** Whether the selected period is the month `now` falls in — drives "so far" vs. final wording. */
+  isCurrentMonth: boolean;
 }
 
-/** Reads the year/month out of a "YYYY-MM-DD" or ISO timestamp string without
- * going through Date's local-timezone conversion (which can roll UTC
- * midnight back a day depending on server TZ). */
-function yearMonthOf(dateStr: string): [number, number] {
-  const [year, month] = dateStr.split('-');
-  return [Number(year), Number(month) - 1];
+/**
+ * "YYYY-MM". Used as the canonical handle for a period because it is what the
+ * URL carries, what Postgres returns from `to_char(..., 'YYYY-MM')`, and what
+ * a date string starts with — so bucketing is a string compare with no
+ * timezone conversion and no 0-vs-1-indexed month to get wrong.
+ */
+export type MonthKey = string;
+
+export function monthKeyOf(date: Date): MonthKey {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export function isMonthKey(value: string | null | undefined): value is MonthKey {
+  return typeof value === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+}
+
+/** First day of the month, in local time. */
+export function monthKeyToDate(key: MonthKey): Date {
+  const [year, month] = key.split('-').map(Number);
+  return new Date(year, month - 1, 1);
+}
+
+/** Shifts by whole months; Date normalises the overflow, so -1 from January is December. */
+export function shiftMonthKey(key: MonthKey, delta: number): MonthKey {
+  const date = monthKeyToDate(key);
+  return monthKeyOf(new Date(date.getFullYear(), date.getMonth() + delta, 1));
+}
+
+export function daysInMonthKey(key: MonthKey): number {
+  const date = monthKeyToDate(key);
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+}
+
+/** The `count` months ending with (and including) the month of `now`, oldest first. */
+export function recentMonthKeys(count: number, now = new Date()): MonthKey[] {
+  const latest = monthKeyOf(now);
+  return Array.from({ length: count }, (_, i) => shiftMonthKey(latest, i - (count - 1)));
 }
 
 function dayKeyOf(receipt: ReceiptRow): string {
   return (receipt.purchase_date ?? receipt.created_at).slice(0, 10);
+}
+
+/** The month a row belongs to — the same fallback the rest of the app uses. */
+function monthOf(receipt: ReceiptRow): MonthKey {
+  return dayKeyOf(receipt).slice(0, 7);
 }
 
 /** Formats a local Date as "YYYY-MM-DD", matching the DB's date-string format. */
@@ -68,44 +106,66 @@ export function toDateString(d: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-/** Earliest date the dashboard needs data for: covers both the previous
- * month (for the comparison card) and the last 30 days (for the trend chart). */
-export function dashboardRangeStart(now = new Date()): Date {
-  const startOfPreviousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+/**
+ * The rows a dashboard view needs: the selected month, the one before it for
+ * the comparison card, and — for the current month — the trailing 30 days,
+ * which can start before the previous month does.
+ *
+ * `to` is exclusive.
+ */
+export function dashboardRange(month: MonthKey, now = new Date()): { from: Date; to: Date } {
+  const selected = monthKeyToDate(month);
+  const previousStart = new Date(selected.getFullYear(), selected.getMonth() - 1, 1);
+  const nextStart = new Date(selected.getFullYear(), selected.getMonth() + 1, 1);
+
+  if (month !== monthKeyOf(now)) {
+    return { from: previousStart, to: nextStart };
+  }
+
   const last30Start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
-  return startOfPreviousMonth < last30Start ? startOfPreviousMonth : last30Start;
+  return {
+    from: previousStart < last30Start ? previousStart : last30Start,
+    to: nextStart,
+  };
 }
 
 function isSpent(r: ReceiptRow): boolean {
   return r.status === 'processed' && r.amount !== null;
 }
 
-export function buildDashboardData(receipts: ReceiptRow[], now = new Date()): DashboardData {
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
-  const previousMonthDate = new Date(currentYear, currentMonth - 1, 1);
-  const previousYear = previousMonthDate.getFullYear();
-  const previousMonth = previousMonthDate.getMonth();
+/**
+ * Aggregates one month's view. `month` selects the period; `now` is only used
+ * to tell a live month from a finished one — which changes two things:
+ * the daily chart window, and whether the average is per elapsed day or per
+ * day of the whole month. Dividing a finished month by its elapsed days would
+ * report every past month as if it ended today.
+ */
+export function buildDashboardData(
+  receipts: ReceiptRow[],
+  month: MonthKey = monthKeyOf(new Date()),
+  now = new Date(),
+): DashboardData {
+  const previousMonth = shiftMonthKey(month, -1);
+  const isCurrentMonth = month === monthKeyOf(now);
 
-  const monthly = receipts.filter((r) => {
-    if (!isSpent(r)) return false;
-    const [year, month] = yearMonthOf(dayKeyOf(r));
-    return year === currentYear && month === currentMonth;
-  });
-
-  const previousMonthly = receipts.filter((r) => {
-    if (!isSpent(r)) return false;
-    const [year, month] = yearMonthOf(dayKeyOf(r));
-    return year === previousYear && month === previousMonth;
-  });
+  const monthly = receipts.filter((r) => isSpent(r) && monthOf(r) === month);
+  const previousMonthly = receipts.filter((r) => isSpent(r) && monthOf(r) === previousMonth);
 
   const monthTotal = monthly.reduce((sum, r) => sum + (r.amount ?? 0), 0);
   const previousTotal = previousMonthly.reduce((sum, r) => sum + (r.amount ?? 0), 0);
   const hasPreviousData = previousMonthly.length > 0;
   const percentChange =
-    hasPreviousData && previousTotal > 0 ? ((monthTotal - previousTotal) / previousTotal) * 100 : null;
+    hasPreviousData && previousTotal > 0
+      ? ((monthTotal - previousTotal) / previousTotal) * 100
+      : null;
   const direction: MonthComparison['direction'] =
-    percentChange === null ? 'flat' : percentChange > 0 ? 'up' : percentChange < 0 ? 'down' : 'flat';
+    percentChange === null
+      ? 'flat'
+      : percentChange > 0
+        ? 'up'
+        : percentChange < 0
+          ? 'down'
+          : 'flat';
 
   const totals = new Map<Category, number>(CATEGORIES.map((category) => [category, 0]));
   for (const r of monthly) {
@@ -132,32 +192,63 @@ export function buildDashboardData(receipts: ReceiptRow[], now = new Date()): Da
     return biggest;
   }, null);
 
-  const daysElapsed = now.getDate();
+  const daysElapsed = isCurrentMonth ? now.getDate() : daysInMonthKey(month);
   const avgDailySpend = daysElapsed > 0 ? monthTotal / daysElapsed : 0;
 
-  const dailyTrendMap = new Map<string, number>();
-  const orderedDays: string[] = [];
-  for (let i = 29; i >= 0; i--) {
-    const key = toDateString(new Date(currentYear, currentMonth, now.getDate() - i));
-    dailyTrendMap.set(key, 0);
-    orderedDays.push(key);
-  }
-  for (const r of receipts) {
-    if (!isSpent(r)) continue;
-    const key = dayKeyOf(r);
-    if (dailyTrendMap.has(key)) {
-      dailyTrendMap.set(key, (dailyTrendMap.get(key) ?? 0) + (r.amount ?? 0));
-    }
-  }
-  const dailyTrend = orderedDays.map((date) => ({ date, total: dailyTrendMap.get(date) ?? 0 }));
+  const dailyTrend = buildDailyTrend(receipts, month, now, isCurrentMonth);
 
   return {
     monthTotal,
     categoryTotals,
-    comparison: { currentTotal: monthTotal, previousTotal, percentChange, hasPreviousData, direction },
+    comparison: {
+      currentTotal: monthTotal,
+      previousTotal,
+      percentChange,
+      hasPreviousData,
+      direction,
+    },
     topCategory,
     biggestExpense,
     avgDailySpend,
     dailyTrend,
+    isCurrentMonth,
   };
+}
+
+/**
+ * The live month keeps its trailing-30-day window, which deliberately spans two
+ * calendar months so recent behaviour stays visible across the boundary. A
+ * finished month has no "trailing" to speak of, so it charts its own days.
+ */
+function buildDailyTrend(
+  receipts: ReceiptRow[],
+  month: MonthKey,
+  now: Date,
+  isCurrentMonth: boolean,
+): DailySpend[] {
+  const orderedDays: string[] = [];
+
+  if (isCurrentMonth) {
+    for (let i = 29; i >= 0; i--) {
+      orderedDays.push(
+        toDateString(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)),
+      );
+    }
+  } else {
+    const start = monthKeyToDate(month);
+    for (let day = 1; day <= daysInMonthKey(month); day++) {
+      orderedDays.push(toDateString(new Date(start.getFullYear(), start.getMonth(), day)));
+    }
+  }
+
+  const totals = new Map(orderedDays.map((day) => [day, 0]));
+  for (const r of receipts) {
+    if (!isSpent(r)) continue;
+    const key = dayKeyOf(r);
+    if (totals.has(key)) {
+      totals.set(key, (totals.get(key) ?? 0) + (r.amount ?? 0));
+    }
+  }
+
+  return orderedDays.map((date) => ({ date, total: totals.get(date) ?? 0 }));
 }

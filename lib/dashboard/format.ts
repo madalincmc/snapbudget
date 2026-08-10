@@ -55,3 +55,23 @@ export function monthName(date: Date): string {
 export function previousMonthName(date: Date): string {
   return MONTH_LONG[(date.getMonth() + 11) % 12];
 }
+
+/**
+ * A "YYYY-MM" key as a month name, e.g. "august". The year is appended only
+ * when it is not the current one, so the common case stays short and an older
+ * month is never ambiguous — same rule as formatListDate.
+ */
+export function monthKeyLabel(key: string, now = new Date()): string {
+  const [year, month] = key.split('-');
+  const name = MONTH_LONG[Number(month) - 1];
+  return Number(year) === now.getFullYear() ? name : `${name} ${year}`;
+}
+
+/** Compact form for chart axes, e.g. "aug" — with a year suffix only in January. */
+export function monthKeyShortLabel(key: string): string {
+  const [year, month] = key.split('-');
+  const name = MONTH_SHORT[Number(month) - 1];
+  // Labelling every bar with a year is noise; marking each January is enough
+  // to place a twelve-month axis that spans a year boundary.
+  return month === '01' ? `${name} ${year.slice(2)}` : name;
+}

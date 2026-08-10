@@ -44,6 +44,24 @@ export const CATEGORY_BAR_CLASS: Record<Category, string> = {
   Altele: 'bg-zinc-400 dark:bg-zinc-500',
 };
 
+/**
+ * SVG fill equivalents of CATEGORY_BAR_CLASS, for the sparklines in the
+ * category trends. Spelled out rather than derived from the bar classes at
+ * runtime: Tailwind scans source text for complete class names, so a string
+ * built by replacing "bg-" with "fill-" would never be generated.
+ */
+export const CATEGORY_FILL_CLASS: Record<Category, string> = {
+  'Mâncare & Băutură': 'fill-[#2a78d6] dark:fill-[#3987e5]',
+  Transport: 'fill-[#eb6834] dark:fill-[#d95926]',
+  Casă: 'fill-[#1baf7a] dark:fill-[#199e70]',
+  Sănătate: 'fill-[#eda100] dark:fill-[#c98500]',
+  Cumpărături: 'fill-[#e87ba4] dark:fill-[#d55181]',
+  Familie: 'fill-[#008300] dark:fill-[#008300]',
+  Divertisment: 'fill-[#4a3aa7] dark:fill-[#9085e9]',
+  Financiar: 'fill-[#e34948] dark:fill-[#e66767]',
+  Altele: 'fill-zinc-400 dark:fill-zinc-500',
+};
+
 /** Tinted background + matching text, for badges/pills (vs. the solid bars above). */
 export const CATEGORY_BADGE_CLASS: Record<Category, string> = {
   'Mâncare & Băutură': 'bg-[#2a78d6]/10 text-[#2a78d6] dark:bg-[#3987e5]/15 dark:text-[#3987e5]',

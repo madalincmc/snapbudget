@@ -52,7 +52,8 @@ Track your expenses by photographing receipts — no manual entry. Snap a photo,
 - **Recurring expenses** — rent, subscriptions, utilities and insurance are added automatically on a weekly, monthly or yearly schedule; pause, resume, edit or delete a rule at any time. Generated rows are ordinary expenses, so they flow into the dashboard, charts and history unchanged.
 - **Household sharing** — create a household and invite others by email. Everyone contributes from their own account and sees the combined totals, and the dashboard can be filtered to one member or just yourself. Owners can cancel invitations and remove members; members can leave. Access is enforced by Postgres row-level security, not just in the UI.
 - **Budgets** — a monthly limit on the total and/or per category. The dashboard shows how much is used, what's left, and where the month lands at the current pace, so going over is visible days before it happens rather than after. In a household the budget can cover everyone's pooled spending or just your own; which one you see follows the same member filter as the rest of the dashboard.
-- **Dashboard insights** — current vs. previous month comparison, average daily spend, top category, biggest expense, and a 30-day spending chart that shades the current month apart from the previous one.
+- **Dashboard insights** — current vs. previous month comparison, average daily spend, top category, biggest expense, and a 30-day spending chart that shades the current month apart from the previous one. Any past month can be selected, and the whole dashboard re-scopes to it.
+- **12-month analysis** — totals per month against the average, the calendar-year total, and a per-category trend showing which categories are creeping up. Summed in Postgres rather than in the app, so a year of a shared household's expenses is never pulled into memory to be added up.
 - **Category breakdown** — spending by category for the current month, with a searchable category/subcategory picker when logging an expense.
 - **History** — search, filter (category, month), and sort every expense, receipt or manual.
 - **Google sign-in** — auth via Supabase, no separate SnapBudget password.
@@ -69,10 +70,11 @@ Track your expenses by photographing receipts — no manual entry. Snap a photo,
 ## Project structure
 
 ```
-app/                  # Next.js App Router routes (dashboard, history, household, recurring, budgets, receipts)
+app/                  # Next.js App Router routes (dashboard, history, household, recurring, budgets, analytics, receipts)
 components/           # Reusable UI components (shadcn/ui primitives under components/ui)
 lib/                  # Supabase clients, OCR, categorization, dashboard aggregation
-supabase/migrations/  # SQL migrations: schema, RLS policies, pg_cron job
+__tests__/            # Vitest unit tests for the pure date/money logic
+supabase/migrations/  # SQL migrations: schema, RLS policies, pg_cron job, aggregate RPC
 scripts/              # Migration runner and end-to-end RLS/recurring checks
 types/                # Shared TypeScript types
 docs/screenshots/     # Images used in this README
@@ -137,17 +139,22 @@ Open [http://localhost:3000](http://localhost:3000).
 npm run build           # Production build
 npm run start           # Serve the production build
 npm run lint            # ESLint
+npm test                # Vitest — unit tests, single run
+npm run test:watch      # Vitest in watch mode
 npm run format          # Prettier — write
 npm run format:check    # Prettier — check only
 npm run db:migrate <f>  # Apply a single SQL migration
 ```
 
-Three end-to-end scripts exercise the trickier database rules against a real Supabase project. All create and delete their own temporary users, so they're safe to re-run:
+`npm test` covers the pure logic — month bucketing, the month-over-month comparison, budget pace, and the 12-month analytics — with no database needed.
+
+Four end-to-end scripts exercise the trickier database rules against a real Supabase project. All create and delete their own temporary users, so they're safe to re-run:
 
 ```bash
-npx dotenv -e .env.local -- node scripts/test-household-flow.mjs   # household sharing + RLS
-npx dotenv -e .env.local -- node scripts/test-recurring-flow.mjs   # recurring date maths + generation
-npx dotenv -e .env.local -- node scripts/test-budget-flow.mjs      # budget scoping, RLS + unique indexes
+npx dotenv -e .env.local -- node scripts/test-household-flow.mjs    # household sharing + RLS
+npx dotenv -e .env.local -- node scripts/test-recurring-flow.mjs    # recurring date maths + generation
+npx dotenv -e .env.local -- node scripts/test-budget-flow.mjs       # budget scoping, RLS + unique indexes
+npx dotenv -e .env.local -- node scripts/test-analytics-flow.mjs    # monthly_spending RPC: sums, bounds, RLS
 ```
 
 ## Deployment
