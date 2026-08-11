@@ -18,6 +18,7 @@ import {
   type BudgetRow,
 } from '@/lib/budgets';
 import { MonthPicker } from '@/components/month-picker';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { CategoryBreakdown } from '@/components/category-breakdown';
 import { MonthHeroCard } from '@/components/month-hero-card';
 import { TrendInsightCards } from '@/components/trend-insight-cards';
@@ -214,6 +215,7 @@ export default async function DashboardPage({
             {hasAnyExpense && members.length > 1 && (
               <HouseholdFilter members={members} meUserId={user.id} />
             )}
+            <ThemeToggle />
             <form action={signOut}>
               <Button
                 type="submit"

@@ -2,6 +2,19 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 
+/*
+ * The theme is chosen by the user, not by the OS, so `dark:` has to follow the
+ * attribute the toggle writes. Tailwind v4 points that variant at
+ * prefers-color-scheme by default — leaving it there would split the app in
+ * two: the design tokens below would obey the toggle while all 84 `dark:`
+ * utilities kept obeying the operating system.
+ *
+ * "System" is not a third state here. The inline script in the root layout
+ * resolves the preference against prefers-color-scheme and always writes a
+ * concrete light or dark, so CSS never has to express "follow the OS".
+ */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -59,7 +72,8 @@
  * scan button, the active nav tab, and "within budget". Category hues are
  * deliberately excluded from that role — see lib/categories.ts.
  */
-:root {
+:root,
+[data-theme='light'] {
   --background: oklch(0.978 0.005 85);
   --foreground: oklch(0.185 0.004 75);
   --card: oklch(1 0 0);
@@ -94,43 +108,41 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* The same warm hue held through the dark ramp, so switching themes reads
-       as the lights going down rather than as a different product. Cards stay
-       lighter than the page here too, keeping the lift direction consistent. */
-    --background: oklch(0.155 0.004 75);
-    --foreground: oklch(0.975 0.003 85);
-    --card: oklch(0.212 0.005 75);
-    --card-foreground: oklch(0.975 0.003 85);
-    --popover: oklch(0.212 0.005 75);
-    --popover-foreground: oklch(0.975 0.003 85);
-    --primary: oklch(0.7 0.135 162);
-    --primary-foreground: oklch(0.18 0.03 162);
-    --secondary: oklch(0.275 0.005 75);
-    --secondary-foreground: oklch(0.975 0.003 85);
-    --muted: oklch(0.275 0.005 75);
-    --muted-foreground: oklch(0.715 0.008 80);
-    --accent: oklch(0.3 0.028 162);
-    --accent-foreground: oklch(0.85 0.1 162);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 11%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.7 0.135 162);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
-  }
+[data-theme='dark'] {
+  /* The same warm hue held through the dark ramp, so switching themes reads
+     as the lights going down rather than as a different product. Cards stay
+     lighter than the page here too, keeping the lift direction consistent. */
+  --background: oklch(0.155 0.004 75);
+  --foreground: oklch(0.975 0.003 85);
+  --card: oklch(0.212 0.005 75);
+  --card-foreground: oklch(0.975 0.003 85);
+  --popover: oklch(0.212 0.005 75);
+  --popover-foreground: oklch(0.975 0.003 85);
+  --primary: oklch(0.7 0.135 162);
+  --primary-foreground: oklch(0.18 0.03 162);
+  --secondary: oklch(0.275 0.005 75);
+  --secondary-foreground: oklch(0.975 0.003 85);
+  --muted: oklch(0.275 0.005 75);
+  --muted-foreground: oklch(0.715 0.008 80);
+  --accent: oklch(0.3 0.028 162);
+  --accent-foreground: oklch(0.85 0.1 162);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.7 0.135 162);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 }
 
 @layer utilities {
