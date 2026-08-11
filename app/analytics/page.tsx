@@ -64,10 +64,10 @@ export default async function AnalyticsPage({
   const currentMonth = monthKeyOf(now);
 
   return (
-    <div className="bg-muted/40 pb-nav flex flex-1 justify-center px-4 pt-6">
-      <div className="flex w-full max-w-lg flex-col gap-4">
+    <div className="pb-nav flex flex-1 justify-center px-4 pt-5">
+      <div className="flex w-full max-w-lg flex-col gap-5">
         <div className="flex items-center justify-between gap-2 px-1">
-          <h1 className="text-foreground text-lg font-semibold">Analiză</h1>
+          <h1 className="text-foreground text-lg font-semibold tracking-tight">Analiză</h1>
           <Button
             variant="link"
             className="text-muted-foreground px-0"

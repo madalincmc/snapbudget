@@ -17,21 +17,19 @@ import {
   type Budget,
   type BudgetRow,
 } from '@/lib/budgets';
-import { BudgetSummaryCard } from '@/components/budget-summary-card';
-import { AnalyticsSummaryCard } from '@/components/analytics-summary-card';
 import { MonthPicker } from '@/components/month-picker';
 import { CategoryBreakdown } from '@/components/category-breakdown';
-import { MonthComparisonCard } from '@/components/month-comparison-card';
+import { MonthHeroCard } from '@/components/month-hero-card';
 import { TrendInsightCards } from '@/components/trend-insight-cards';
 import { SpendingTrendChart } from '@/components/spending-trend-chart';
 import { ReceiptsList } from '@/components/receipts-list';
 import { HouseholdFilter } from '@/components/household-filter';
 import { PendingInvitationsBanner } from '@/components/pending-invitations-banner';
 import { DashboardEmptyState } from '@/components/dashboard-empty-state';
-import { RecurringSummaryCard, type RecurringSummary } from '@/components/recurring-summary-card';
+import { QuickLinksCard, type RecurringSummary } from '@/components/quick-links-card';
 import { BottomNav } from '@/components/bottom-nav';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { signOut } from './actions';
 
 export default async function DashboardPage({
@@ -197,23 +195,37 @@ export default async function DashboardPage({
   const budgetOverview = buildBudgetOverview(budgets, monthTotal, categoryTotals, now);
 
   return (
-    <div className="bg-muted/40 pb-nav flex flex-1 justify-center px-4 pt-6">
-      <div className="flex w-full max-w-lg flex-col gap-4">
-        <header className="flex items-center justify-between gap-2 px-1">
-          <h1 className="text-foreground truncate text-lg font-semibold">
-            Salut, {user.user_metadata.full_name?.split(' ')[0] ?? user.email}
-          </h1>
-          <form action={signOut}>
-            <Button
-              type="submit"
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground flex-none"
-            >
-              <LogOut />
-              <span className="sr-only">Deconectare</span>
-            </Button>
-          </form>
+    <div className="pb-nav flex flex-1 justify-center px-4 pt-5">
+      {/* gap-5 between sections, tighter inside them: the page had one uniform
+          gap everywhere, so eleven cards read as eleven equals. */}
+      <div className="flex w-full max-w-lg flex-col gap-5">
+        {/* Identity and period controls share one row. The greeting had a full
+            row of its own above a second row for the filter, which spent the
+            top of a phone screen on chrome before any number appeared. */}
+        <header className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-col">
+            <span className="text-muted-foreground text-xs">Salut,</span>
+            <h1 className="text-foreground truncate text-base leading-tight font-semibold">
+              {user.user_metadata.full_name?.split(' ')[0] ?? user.email}
+            </h1>
+          </div>
+
+          <div className="flex flex-none items-center gap-1">
+            {hasAnyExpense && members.length > 1 && (
+              <HouseholdFilter members={members} meUserId={user.id} />
+            )}
+            <form action={signOut}>
+              <Button
+                type="submit"
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground/70 hover:text-foreground"
+              >
+                <LogOut />
+                <span className="sr-only">Deconectare</span>
+              </Button>
+            </form>
+          </div>
         </header>
 
         <PendingInvitationsBanner invitations={pendingInvitations} />
@@ -222,23 +234,22 @@ export default async function DashboardPage({
           <DashboardEmptyState />
         ) : (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+            <div className="-mt-1 flex justify-center">
               <MonthPicker month={month} currentMonth={currentMonth} />
-              {members.length > 1 && <HouseholdFilter members={members} meUserId={user.id} />}
             </div>
 
-            <Card>
-              <CardHeader>
-                <MonthComparisonCard
+            {/* The number, and whether it is a problem — one card. */}
+            <Card className="[--card-spacing:--spacing(5)]">
+              <CardContent>
+                <MonthHeroCard
                   comparison={comparison}
                   avgDailySpend={avgDailySpend}
                   month={month}
                   isCurrentMonth={isCurrentMonth}
+                  budget={budgetScope ? budgetOverview.overall : null}
                 />
-              </CardHeader>
+              </CardContent>
             </Card>
-
-            {budgetScope && <BudgetSummaryCard overview={budgetOverview} scope={budgetScope} />}
 
             <TrendInsightCards topCategory={topCategory} biggestExpense={biggestExpense} />
 
@@ -261,20 +272,17 @@ export default async function DashboardPage({
               </CardContent>
             </Card>
 
-            <AnalyticsSummaryCard />
-
-            {/* Recent activity and upcoming bills describe now, not the month
-                being browsed — they would be misleading under a past month. */}
+            {/* Recent activity describes now, not the month being browsed. */}
             {isCurrentMonth && (
-              <>
-                <Card>
-                  <CardContent>
-                    <ReceiptsList receipts={latest} meUserId={user.id} creators={creators} />
-                  </CardContent>
-                </Card>
+              <Card>
+                <CardContent>
+                  <ReceiptsList receipts={latest} meUserId={user.id} creators={creators} />
+                </CardContent>
+              </Card>
+            )}
 
-                <RecurringSummaryCard summary={recurringSummary} />
-              </>
+            {isCurrentMonth && (
+              <QuickLinksCard recurring={recurringSummary} budgetCount={budgets.length} />
             )}
           </>
         )}

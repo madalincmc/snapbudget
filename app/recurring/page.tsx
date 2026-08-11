@@ -22,17 +22,21 @@ export default async function RecurringPage() {
 
   const { data } = await supabase
     .from('recurring_expenses')
-    .select('id, title, amount, category, subcategory, frequency, start_date, next_due_date, paused, notes')
+    .select(
+      'id, title, amount, category, subcategory, frequency, start_date, next_due_date, paused, notes',
+    )
     .order('paused', { ascending: true })
     .order('next_due_date', { ascending: true });
 
   const rules = (data ?? []) as RecurringExpense[];
 
   return (
-    <div className="bg-muted/40 pb-nav flex flex-1 justify-center px-4 pt-6">
-      <div className="flex w-full max-w-lg flex-col gap-4">
+    <div className="pb-nav flex flex-1 justify-center px-4 pt-5">
+      <div className="flex w-full max-w-lg flex-col gap-5">
         <div className="flex items-center justify-between gap-2 px-1">
-          <h1 className="text-foreground text-lg font-semibold">Cheltuieli recurente</h1>
+          <h1 className="text-foreground text-lg font-semibold tracking-tight">
+            Cheltuieli recurente
+          </h1>
           <Button
             variant="link"
             className="text-muted-foreground px-0"
@@ -51,7 +55,9 @@ export default async function RecurringPage() {
                 <Repeat2 className="h-7 w-7" />
               </div>
               <div className="flex flex-col gap-1.5">
-                <h2 className="text-foreground text-base font-medium">Nicio cheltuială recurentă</h2>
+                <h2 className="text-foreground text-base font-medium">
+                  Nicio cheltuială recurentă
+                </h2>
                 <p className="text-muted-foreground mx-auto max-w-xs text-sm">
                   Chirie, abonamente, utilități, asigurări — le adaugi o dată și apar automat la
                   fiecare scadență.

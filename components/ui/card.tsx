@@ -12,7 +12,11 @@ function Card({
       data-slot="card"
       data-size={size}
       className={cn(
-        'group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl py-(--card-spacing) text-sm ring-1 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl',
+        // A hairline plus a soft, low shadow rather than a 1px ring: on the
+        // cream page background a hard ring reads as an outline drawn *on*
+        // the card, where a shadow reads as the card sitting above the page.
+        // That lift is what carries the hierarchy now that nothing is inverted.
+        'group/card bg-card text-card-foreground border-border/70 flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl border py-(--card-spacing) text-sm shadow-[0_1px_2px_-1px_oklch(0.2_0.01_75_/_0.08),0_2px_8px_-2px_oklch(0.2_0.01_75_/_0.06)] [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 dark:shadow-[0_1px_2px_-1px_oklch(0_0_0_/_0.4),0_2px_8px_-2px_oklch(0_0_0_/_0.3)] *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl',
         className,
       )}
       {...props}

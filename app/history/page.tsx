@@ -38,9 +38,9 @@ export default async function HistoryPage({
   }
 
   return (
-    <div className="bg-muted/40 pb-nav flex flex-1 justify-center px-4 pt-6">
-      <div className="flex w-full max-w-2xl flex-col gap-4">
-        <h1 className="text-foreground px-1 text-lg font-semibold">Istoric</h1>
+    <div className="pb-nav flex flex-1 justify-center px-4 pt-5">
+      <div className="flex w-full max-w-2xl flex-col gap-5">
+        <h1 className="text-foreground px-1 text-lg font-semibold tracking-tight">Istoric</h1>
         <HistoryList
           members={members}
           meUserId={user.id}

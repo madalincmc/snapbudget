@@ -46,7 +46,7 @@ export default async function ReceiptDetailPage({
   const updateReceiptWithId = updateReceipt.bind(null, id);
 
   return (
-    <div className="bg-muted/40 flex flex-1 justify-center px-6 py-10">
+    <div className="flex flex-1 justify-center px-6 py-10">
       <div className="flex w-full max-w-lg flex-col gap-6">
         <Button
           variant="link"

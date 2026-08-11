@@ -17,7 +17,7 @@ export default async function NewRecurringPage() {
   }
 
   return (
-    <div className="bg-muted/40 flex flex-1 justify-center px-4 py-6">
+    <div className="flex flex-1 justify-center px-4 py-6">
       <div className="flex w-full max-w-lg flex-col gap-5">
         <Button
           variant="link"

@@ -25,7 +25,7 @@ export function BottomNav() {
 
   return (
     <>
-      <nav className="bg-background/85 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur-md">
+      <nav className="bg-background/80 border-border/70 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-lg items-stretch pb-[env(safe-area-inset-bottom)]">
           {TABS.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
@@ -35,11 +35,21 @@ export function BottomNav() {
                 href={href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors',
-                  active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                  'group/tab flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors',
+                  active ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
-                <Icon className={cn('h-5 w-5', active && 'stroke-[2.4]')} />
+                {/* The tint sits behind the icon rather than on the label, so
+                    the active tab reads at a glance without the row of labels
+                    shifting weight. */}
+                <span
+                  className={cn(
+                    'flex h-7 w-12 items-center justify-center rounded-full transition-colors',
+                    active ? 'bg-primary/12' : 'group-hover/tab:bg-muted',
+                  )}
+                >
+                  <Icon className={cn('h-5 w-5', active && 'stroke-[2.3]')} />
+                </span>
                 {label}
               </Link>
             );
@@ -50,7 +60,7 @@ export function BottomNav() {
       <Link
         href="/receipts/new"
         aria-label="Adaugă bon"
-        className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring/50 fixed right-[max(1rem,calc(50%-16rem+1rem))] bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-colors focus-visible:ring-3 focus-visible:outline-none active:translate-y-px"
+        className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring/50 shadow-primary/25 fixed right-[max(1rem,calc(50%-16rem+1rem))] bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg transition-all focus-visible:ring-3 focus-visible:outline-none active:translate-y-px active:scale-95"
       >
         <Camera className="h-6 w-6" />
       </Link>

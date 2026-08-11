@@ -21,7 +21,9 @@ export function ReceiptsList({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-muted-foreground text-sm font-medium">Ultimele cheltuieli</h2>
+        <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+          Ultimele cheltuieli
+        </h2>
         {receipts.length > 0 && (
           <Link
             href="/history"
@@ -39,7 +41,9 @@ export function ReceiptsList({
         <ul className="divide-border flex flex-col divide-y">
           {receipts.map((r) => {
             const creatorName =
-              meUserId && r.user_id !== meUserId ? (creators?.[r.user_id]?.displayName ?? null) : null;
+              meUserId && r.user_id !== meUserId
+                ? (creators?.[r.user_id]?.displayName ?? null)
+                : null;
             const isOther = Boolean(meUserId && r.user_id !== meUserId);
 
             return (
@@ -48,8 +52,8 @@ export function ReceiptsList({
                   href={`/receipts/${r.id}`}
                   className="hover:bg-muted/50 -mx-2 flex items-center gap-3 rounded-lg px-2 py-3 transition-colors"
                 >
-                  <ReceiptThumbnail source={r.source} />
-                  <div className="flex min-w-0 flex-1 flex-col">
+                  <ReceiptThumbnail source={r.source} category={r.category} />
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="text-foreground flex items-center gap-1.5 text-sm font-medium">
                       <span className="truncate">{r.merchant ?? 'Bon fără nume'}</span>
                       {isOther && <MemberChip name={creatorName} />}
@@ -61,8 +65,9 @@ export function ReceiptsList({
                     </span>
                   </div>
                   {r.amount !== null ? (
-                    <span className="text-foreground flex-none text-sm font-medium tabular-nums">
-                      {r.amount.toFixed(2)} lei
+                    <span className="text-foreground flex-none text-sm font-semibold tabular-nums">
+                      {r.amount.toFixed(2)}
+                      <span className="text-muted-foreground/70 text-xs font-normal"> lei</span>
                     </span>
                   ) : (
                     <StatusBadge status={r.status} />
