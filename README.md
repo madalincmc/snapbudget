@@ -81,7 +81,6 @@ app/                  # Next.js App Router routes (dashboard, history, household
 components/           # Reusable UI components (shadcn/ui primitives under components/ui)
 lib/                  # Supabase clients, OCR, categorization, dashboard aggregation
 __tests__/            # Vitest unit tests for the pure date/money logic
-e2e/                  # Playwright browser suite, with its own seeded account
 supabase/migrations/  # SQL migrations: schema, RLS policies, pg_cron job, aggregate RPC
 scripts/              # Migration runner and end-to-end RLS/recurring checks
 types/                # Shared TypeScript types
@@ -154,37 +153,15 @@ npm run format:check    # Prettier — check only
 npm run db:migrate <f>  # Apply a single SQL migration
 ```
 
-`npm test` covers the pure logic — month bucketing, the month-over-month comparison, budget pace, and the 12-month analytics — with no database needed. It runs on every pull request, along with lint, typecheck and a production build.
+`npm test` covers the pure logic — month bucketing, the month-over-month comparison, budget pace, and the 12-month analytics — with no database needed.
 
-### End-to-end tests
-
-Two suites run automatically on every merge to `main`, against the real project.
-
-**Browser (Playwright)** — drives the actual UI: the dashboard and its budget progress, the month picker, the theme toggle, history search, budgets, analytics and the household screen. Sign-in is Google-only and no CI browser can complete that, so the suite creates a temporary account through the admin API and hands its session to the browser as storage state; the account and everything it created are deleted afterwards.
-
-```bash
-npm run e2e        # against a dev server, using .env.local
-npm run e2e:ui     # same, in Playwright's UI mode
-```
-
-**Database rules** — four scripts that exercise row-level security directly through the Data API, which no browser test reaches. They also create and delete their own users, so they're safe to re-run:
+Four end-to-end scripts exercise the trickier database rules against a real Supabase project. All create and delete their own temporary users, so they're safe to re-run:
 
 ```bash
 npx dotenv -e .env.local -- node scripts/test-household-flow.mjs    # household sharing + RLS
 npx dotenv -e .env.local -- node scripts/test-recurring-flow.mjs    # recurring date maths + generation
 npx dotenv -e .env.local -- node scripts/test-budget-flow.mjs       # budget scoping, RLS + unique indexes
 npx dotenv -e .env.local -- node scripts/test-analytics-flow.mjs    # monthly_spending RPC: sums, bounds, RLS
-```
-
-Both suites need the service-role key, so they run only on `push` to `main`, never on `pull_request` — GitHub withholds secrets from workflows a fork's PR triggers, and on a public repository that event choice is what keeps the key out of reach. They report _after_ a merge rather than gating it; treat a red E2E run as "roll back or fix now", not as a failed review.
-
-To enable them, add four repository secrets (the workflow skips with a warning until they exist):
-
-```bash
-gh secret set NEXT_PUBLIC_SUPABASE_URL
-gh secret set NEXT_PUBLIC_SUPABASE_ANON_KEY
-gh secret set SUPABASE_SERVICE_ROLE_KEY
-gh secret set POSTGRES_URL_NON_POOLING
 ```
 
 ## Deployment
