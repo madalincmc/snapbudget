@@ -1,51 +1,24 @@
 name: E2E
 
-# Only on merges to main, never on pull_request. That is the security boundary:
-# GitHub withholds secrets from workflows triggered by a fork's pull request, so
-# on a public repository this event choice is what keeps the service-role key
-# out of reach of anyone who can open a PR. A push to main can only happen
-# after a merge, which needs write access.
+# Runs on pull requests as well as merges, which is only possible because the
+# suites no longer touch the real project: a Supabase stack is started on the
+# runner, migrations are applied to it, and it is thrown away with the job.
+# Nothing here is secret, so a fork's pull request is not a problem — and the
+# tests can gate a merge rather than only report after one.
 on:
+  pull_request:
   push:
     branches: [main]
-  workflow_dispatch:
 
 concurrency:
-  # Never two runs against the same database at once — they would each create
-  # and delete users while the other was reading them.
-  group: e2e-production
-  cancel-in-progress: false
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # Without this the workflow would fail on every push until the secrets are
-  # added, which trains people to ignore a red main. It skips loudly instead.
-  guard:
-    name: Check credentials
-    runs-on: ubuntu-latest
-    outputs:
-      configured: ${{ steps.check.outputs.configured }}
-    steps:
-      - id: check
-        run: |
-          if [ -n "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::E2E secrets are not configured — suites skipped. See README > End-to-end tests."
-          fi
-
   e2e:
     name: Browser and RLS suites
-    needs: guard
-    if: needs.guard.outputs.configured == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      POSTGRES_URL_NON_POOLING: ${{ secrets.POSTGRES_URL_NON_POOLING }}
+    timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v5
@@ -57,17 +30,45 @@ jobs:
 
       - run: npm ci
 
+      # Postgres, GoTrue and PostgREST in containers on the runner. The
+      # migrations in supabase/migrations are applied to it, so the schema and
+      # every row-level security policy under test are the real ones.
+      - name: Start Supabase
+        run: npx supabase start
+
+      - name: Apply migrations
+        run: npx supabase db reset --no-seed
+
+      # The local stack's keys are fixed values published in Supabase's own
+      # documentation — identical on every machine — so they are read at run
+      # time rather than stored anywhere. Nothing below is a credential.
+      - name: Export local credentials
+        run: |
+          eval "$(npx supabase status -o env | sed 's/^/export /')"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "POSTGRES_URL_NON_POOLING=$DB_URL"
+          } >> "$GITHUB_ENV"
+
+      # Fails loudly and early if the local image lacks something the schema
+      # needs, rather than letting a later suite fail for an obscure reason.
+      - name: Verify schema prerequisites
+        run: |
+          npx supabase db execute --query "
+            select extname from pg_extension where extname in ('pg_cron','pg_trgm');
+            select count(*) as budget_policies from pg_policies where tablename = 'budgets';
+          "
+
       - name: Install Chromium
         run: npx playwright install chromium --with-deps
 
-      # Drives the real UI against a temporary account, seeded and deleted by
-      # the suite's own global setup and teardown.
       - name: Browser suite
         run: npm run e2e:ci
 
-      # Different layer, same credentials: these exercise the row-level
-      # security policies directly through the Data API, which no browser test
-      # reaches. Each creates and deletes its own users.
+      # A different layer from the browser tests: these drive the row-level
+      # security policies straight through the Data API.
       - name: Household RLS
         run: node scripts/test-household-flow.mjs
 
@@ -87,3 +88,7 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 14
+
+      - name: Stop Supabase
+        if: always()
+        run: npx supabase stop --no-backup

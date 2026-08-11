@@ -176,16 +176,19 @@ npx dotenv -e .env.local -- node scripts/test-budget-flow.mjs       # budget sco
 npx dotenv -e .env.local -- node scripts/test-analytics-flow.mjs    # monthly_spending RPC: sums, bounds, RLS
 ```
 
-Both suites need the service-role key, so they run only on `push` to `main`, never on `pull_request` — GitHub withholds secrets from workflows a fork's PR triggers, and on a public repository that event choice is what keeps the key out of reach. They report _after_ a merge rather than gating it; treat a red E2E run as "roll back or fix now", not as a failed review.
+In CI both suites run against a **Supabase stack started on the runner**, not against the real project: `supabase start`, the migrations in `supabase/migrations/`, the tests, and then the whole thing is thrown away with the job. So no credentials are stored anywhere — a local stack's keys are fixed values published in Supabase's own documentation — and no test ever writes to production.
 
-To enable them, add four repository secrets (the workflow skips with a warning until they exist):
+Because nothing is secret, they also run on pull requests, which means a broken policy or a broken screen blocks the merge instead of being reported after it.
+
+To run them the same way locally you need Docker:
 
 ```bash
-gh secret set NEXT_PUBLIC_SUPABASE_URL
-gh secret set NEXT_PUBLIC_SUPABASE_ANON_KEY
-gh secret set SUPABASE_SERVICE_ROLE_KEY
-gh secret set POSTGRES_URL_NON_POOLING
+npx supabase start        # once
+npx supabase db reset     # apply the migrations
+npm run e2e
 ```
+
+Without Docker, `npm run e2e` falls back to whatever `.env.local` points at. Convenient, but it does write to that project.
 
 ## Deployment
 
