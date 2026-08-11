@@ -62,6 +62,7 @@ Track your expenses by photographing receipts — no manual entry. Snap a photo,
 - **12-month analysis** — totals per month against the average, the calendar-year total, and a per-category trend showing which categories are creeping up. Summed in Postgres rather than in the app, so a year of a shared household's expenses is never pulled into memory to be added up.
 - **Category breakdown** — spending by category for the current month, with a searchable category/subcategory picker when logging an expense.
 - **History** — search, filter (category, month), and sort every expense, receipt or manual.
+- **Light and dark theme** — a toggle in the dashboard header cycles automatic → light → dark. Automatic follows the operating system and keeps following it while the app is open. The choice is remembered and applied before the first paint, so reopening the app never flashes the wrong theme.
 - **Google sign-in** — auth via Supabase, no separate SnapBudget password.
 
 ## Stack
