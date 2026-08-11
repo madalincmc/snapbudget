@@ -150,7 +150,7 @@ export default async function BudgetsPage({
                       type="submit"
                       variant="ghost"
                       size="icon-sm"
-                      className="text-destructive"
+                      className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 focus-visible:text-destructive"
                     >
                       <Trash2 />
                       <span className="sr-only">Șterge bugetul total</span>
@@ -235,7 +235,7 @@ export default async function BudgetsPage({
                               type="submit"
                               variant="ghost"
                               size="icon-sm"
-                              className="text-destructive"
+                              className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 focus-visible:text-destructive"
                             >
                               <Trash2 />
                               <span className="sr-only">Șterge limita pentru {category}</span>
