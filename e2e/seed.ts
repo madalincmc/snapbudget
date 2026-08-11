@@ -157,7 +157,12 @@ export async function seed(): Promise<SeededAccount> {
     source: 'manual',
   });
 
-  const { error: expErr } = await api.from('receipts').insert([
+  // Inserted as the signed-in owner, not through the service role. The app
+  // never uses the service role for table access, and the migrations grant
+  // receipts only to `authenticated` — hosted Supabase happens to hand
+  // service_role broad default privileges, but a stack built from these
+  // migrations alone does not, so the shortcut only worked against production.
+  const { error: expErr } = await owner.client.from('receipts').insert([
     expense(FIXTURES.merchants.groceries, 150, dateIn(0, 2), 'Mâncare & Băutură', 'Alimente'),
     expense(FIXTURES.merchants.electronics, 500, dateIn(0, 3), 'Cumpărături', 'Electronice'),
     expense(FIXTURES.merchants.fuel, 200, dateIn(0, 4), 'Transport', 'Combustibil'),
