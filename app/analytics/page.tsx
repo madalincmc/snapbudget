@@ -147,7 +147,7 @@ export default async function AnalyticsPage({
                     <span className="text-muted-foreground text-xs">
                       Luna cu cele mai multe cheltuieli
                     </span>
-                    <span className="text-foreground text-sm font-medium capitalize tabular-nums">
+                    <span className="text-foreground text-sm font-medium tabular-nums first-letter:uppercase">
                       {monthKeyLabel(analytics.busiestMonth.month)} ·{' '}
                       {analytics.busiestMonth.total.toFixed(2)} lei
                     </span>

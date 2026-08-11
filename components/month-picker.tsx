@@ -43,7 +43,10 @@ export function MonthPicker({ month, currentMonth }: { month: MonthKey; currentM
         <span className="sr-only">Luna anterioară</span>
       </Button>
 
-      <span className="text-foreground min-w-24 text-center text-sm font-medium capitalize">
+      {/* first-letter, not `capitalize`: the latter title-cases every word, so
+          "Luna aceasta" came out "Luna Aceasta" — wrong in Romanian, where
+          only the first word of a phrase takes a capital. */}
+      <span className="text-foreground min-w-24 text-center text-sm font-medium first-letter:uppercase">
         {isCurrent ? 'Luna aceasta' : monthKeyLabel(month)}
       </span>
 

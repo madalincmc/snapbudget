@@ -23,25 +23,31 @@ Track your expenses by photographing receipts — no manual entry. Snap a photo,
   </tr>
   <tr>
     <td align="center" width="33%">
-      <img src="docs/screenshots/dashboard-overview.jpg" alt="Dashboard: month-to-date total, trend insights and category breakdown" width="260"><br>
-      <sub>Month-to-date, insights &amp; categories</sub>
+      <img src="docs/screenshots/dashboard-overview.jpg" alt="Dashboard: month total with budget progress, insights and category breakdown" width="260"><br>
+      <sub>Month total, budget &amp; categories</sub>
     </td>
     <td align="center" width="33%">
-      <img src="docs/screenshots/dashboard-trend.jpg" alt="Dashboard: 30-day spending chart, latest expenses and recurring summary" width="260"><br>
-      <sub>30-day trend, latest &amp; recurring</sub>
+      <img src="docs/screenshots/dashboard-trend.jpg" alt="Dashboard: per-category budgets and the 30-day spending chart" width="260"><br>
+      <sub>Category limits &amp; 30-day trend</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/budgets.jpg" alt="Monthly budget with pace projection, plus per-category limits" width="260"><br>
+      <sub>Budgets, overall &amp; per category</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/analytics.jpg" alt="Twelve-month spending chart with the average marked, year total and monthly average" width="260"><br>
+      <sub>12 months, average &amp; year total</sub>
     </td>
     <td align="center" width="33%">
       <img src="docs/screenshots/recurring.jpg" alt="Recurring expense rules, with pause and resume" width="260"><br>
       <sub>Recurring rules, pause &amp; resume</sub>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="33%">
       <img src="docs/screenshots/household.jpg" alt="Household members and pending invitations" width="260"><br>
       <sub>Shared household &amp; invitations</sub>
     </td>
-    <td width="33%"></td>
-    <td width="33%"></td>
   </tr>
 </table>
 
