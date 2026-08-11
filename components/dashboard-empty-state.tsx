@@ -23,7 +23,12 @@ export function DashboardEmptyState() {
           </p>
         </div>
         <div className="flex w-full max-w-xs flex-col gap-2 pt-1">
-          <Button size="lg" className="h-11 rounded-full" nativeButton={false} render={<Link href="/receipts/new" />}>
+          <Button
+            size="lg"
+            className="h-11 rounded-full"
+            nativeButton={false}
+            render={<Link href="/receipts/new" />}
+          >
             <Camera />
             Fotografiază un bon
           </Button>

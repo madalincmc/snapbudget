@@ -20,7 +20,9 @@ function memberProfile(user: { user_metadata: Record<string, unknown>; email?: s
   return {
     display_name: (metadata.full_name as string | undefined) ?? user.email ?? null,
     avatar_url:
-      (metadata.avatar_url as string | undefined) ?? (metadata.picture as string | undefined) ?? null,
+      (metadata.avatar_url as string | undefined) ??
+      (metadata.picture as string | undefined) ??
+      null,
     email: user.email ?? null,
   };
 }
