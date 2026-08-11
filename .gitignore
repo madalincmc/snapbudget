@@ -43,8 +43,3 @@ next-env.d.ts
 
 .vercel
 .env*
-
-# playwright
-/test-results/
-/playwright-report/
-/e2e/.auth/
