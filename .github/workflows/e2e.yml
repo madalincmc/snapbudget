@@ -1,0 +1,89 @@
+name: E2E
+
+# Only on merges to main, never on pull_request. That is the security boundary:
+# GitHub withholds secrets from workflows triggered by a fork's pull request, so
+# on a public repository this event choice is what keeps the service-role key
+# out of reach of anyone who can open a PR. A push to main can only happen
+# after a merge, which needs write access.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # Never two runs against the same database at once — they would each create
+  # and delete users while the other was reading them.
+  group: e2e-production
+  cancel-in-progress: false
+
+jobs:
+  # Without this the workflow would fail on every push until the secrets are
+  # added, which trains people to ignore a red main. It skips loudly instead.
+  guard:
+    name: Check credentials
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        run: |
+          if [ -n "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::E2E secrets are not configured — suites skipped. See README > End-to-end tests."
+          fi
+
+  e2e:
+    name: Browser and RLS suites
+    needs: guard
+    if: needs.guard.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      POSTGRES_URL_NON_POOLING: ${{ secrets.POSTGRES_URL_NON_POOLING }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install chromium --with-deps
+
+      # Drives the real UI against a temporary account, seeded and deleted by
+      # the suite's own global setup and teardown.
+      - name: Browser suite
+        run: npm run e2e:ci
+
+      # Different layer, same credentials: these exercise the row-level
+      # security policies directly through the Data API, which no browser test
+      # reaches. Each creates and deletes its own users.
+      - name: Household RLS
+        run: node scripts/test-household-flow.mjs
+
+      - name: Recurring generation
+        run: node scripts/test-recurring-flow.mjs
+
+      - name: Budget scoping and RLS
+        run: node scripts/test-budget-flow.mjs
+
+      - name: Analytics RPC and RLS
+        run: node scripts/test-analytics-flow.mjs
+
+      - name: Upload report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
