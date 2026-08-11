@@ -30,62 +30,103 @@ export const SUBCATEGORIES: Record<Category, readonly string[]> = {
 };
 
 /**
- * Solid bar fill, for the dashboard's category-breakdown chart.
+ * Category identity lives in CSS variables (`--cat-*` in globals.css), not in
+ * hex literals here.
  *
- * Two hues moved when emerald became the brand accent. Casă was emerald
- * (#1baf7a) and Familie a flat green (#008300), which put three greens on
- * screen at once and left "within budget" competing with a category. Casă is
- * now teal — far enough round the wheel to read as blue-side — and Familie a
- * yellow-green, so no category can be mistaken for a brand state. The
- * remaining six are untouched: they were deliberate (MAD-60) and never
- * collided.
+ * Three things follow from that. The light/dark pair for a hue is chosen once,
+ * in one place, instead of being restated in a `dark:` half of every class
+ * string; the same token drives a `bg-`, a `fill-` and a `text-` utility, so an
+ * HTML bar and an SVG mark are the same colour by construction rather than by
+ * two maps agreeing; and the hues stay *outside* the four palettes, because
+ * they encode which category this is — a reader who learned Transport is
+ * orange must not have it repainted for choosing a different accent.
+ *
+ * The eight hues are validated as a categorical palette: worst adjacent pair
+ * ΔE 12.9 light / 10.5 dark under deuteranopia (target ≥ 8), and every `-ink`
+ * step clears 4.5:1 as text on its own surface. "Altele" is a residual bucket
+ * rather than a spending identity, so it takes a neutral instead of a ninth
+ * hue — which is also why the set stays inside the eight-slot ceiling.
+ */
+
+/** Token stem per category — `--cat-food`, `--cat-food-ink`, `bg-cat-food`, … */
+export const CATEGORY_TOKEN: Record<Category, string> = {
+  'Mâncare & Băutură': 'food',
+  Transport: 'transport',
+  Casă: 'home',
+  Sănătate: 'health',
+  Cumpărături: 'shopping',
+  Familie: 'family',
+  Divertisment: 'fun',
+  Financiar: 'finance',
+  Altele: 'other',
+};
+
+/**
+ * The raw custom property, for the places a Tailwind utility cannot reach:
+ * SVG gradient stops, `color-mix()` expressions, inline `style` on a segment
+ * whose colour is chosen at runtime.
+ */
+export const CATEGORY_VAR: Record<Category, string> = {
+  'Mâncare & Băutură': 'var(--cat-food)',
+  Transport: 'var(--cat-transport)',
+  Casă: 'var(--cat-home)',
+  Sănătate: 'var(--cat-health)',
+  Cumpărături: 'var(--cat-shopping)',
+  Familie: 'var(--cat-family)',
+  Divertisment: 'var(--cat-fun)',
+  Financiar: 'var(--cat-finance)',
+  Altele: 'var(--cat-other)',
+};
+
+/**
+ * Solid fill, for bars and dots. Spelled out rather than built from
+ * CATEGORY_TOKEN at runtime: Tailwind scans source text for complete class
+ * names, so an interpolated `bg-cat-${token}` would never be generated.
  */
 export const CATEGORY_BAR_CLASS: Record<Category, string> = {
-  'Mâncare & Băutură': 'bg-[#2a78d6] dark:bg-[#3987e5]',
-  Transport: 'bg-[#eb6834] dark:bg-[#d95926]',
-  Casă: 'bg-[#0e93a8] dark:bg-[#17a3b8]',
-  Sănătate: 'bg-[#eda100] dark:bg-[#c98500]',
-  Cumpărături: 'bg-[#e87ba4] dark:bg-[#d55181]',
-  Familie: 'bg-[#6f9f2a] dark:bg-[#84b833]',
-  Divertisment: 'bg-[#4a3aa7] dark:bg-[#9085e9]',
-  Financiar: 'bg-[#e34948] dark:bg-[#e66767]',
-  // "Altele" is a residual/catch-all bucket, not a real spending identity —
-  // it deliberately gets a neutral tint rather than the next hue in line.
-  Altele: 'bg-zinc-400 dark:bg-zinc-500',
+  'Mâncare & Băutură': 'bg-cat-food',
+  Transport: 'bg-cat-transport',
+  Casă: 'bg-cat-home',
+  Sănătate: 'bg-cat-health',
+  Cumpărături: 'bg-cat-shopping',
+  Familie: 'bg-cat-family',
+  Divertisment: 'bg-cat-fun',
+  Financiar: 'bg-cat-finance',
+  Altele: 'bg-cat-other',
 };
 
 /** Small colour chip used to identify a category in lists and legends. */
 export const CATEGORY_DOT_CLASS = CATEGORY_BAR_CLASS;
 
-/**
- * SVG fill equivalents of CATEGORY_BAR_CLASS, for the sparklines in the
- * category trends. Spelled out rather than derived from the bar classes at
- * runtime: Tailwind scans source text for complete class names, so a string
- * built by replacing "bg-" with "fill-" would never be generated.
- */
+/** SVG fill equivalents, for sparklines and chart marks. */
 export const CATEGORY_FILL_CLASS: Record<Category, string> = {
-  'Mâncare & Băutură': 'fill-[#2a78d6] dark:fill-[#3987e5]',
-  Transport: 'fill-[#eb6834] dark:fill-[#d95926]',
-  Casă: 'fill-[#0e93a8] dark:fill-[#17a3b8]',
-  Sănătate: 'fill-[#eda100] dark:fill-[#c98500]',
-  Cumpărături: 'fill-[#e87ba4] dark:fill-[#d55181]',
-  Familie: 'fill-[#6f9f2a] dark:fill-[#84b833]',
-  Divertisment: 'fill-[#4a3aa7] dark:fill-[#9085e9]',
-  Financiar: 'fill-[#e34948] dark:fill-[#e66767]',
-  Altele: 'fill-zinc-400 dark:fill-zinc-500',
+  'Mâncare & Băutură': 'fill-cat-food',
+  Transport: 'fill-cat-transport',
+  Casă: 'fill-cat-home',
+  Sănătate: 'fill-cat-health',
+  Cumpărături: 'fill-cat-shopping',
+  Familie: 'fill-cat-family',
+  Divertisment: 'fill-cat-fun',
+  Financiar: 'fill-cat-finance',
+  Altele: 'fill-cat-other',
 };
 
-/** Tinted background + matching text, for badges/pills (vs. the solid bars above). */
+/**
+ * Tinted background + readable text, for badges and tiles. The text uses the
+ * `-ink` step rather than the mark colour: the mark hues are tuned to sit on a
+ * surface as a *shape*, and several of them (yellow at 2.2:1, pink at 2.7:1)
+ * are unreadable as letters.
+ */
 export const CATEGORY_BADGE_CLASS: Record<Category, string> = {
-  'Mâncare & Băutură': 'bg-[#2a78d6]/10 text-[#2a78d6] dark:bg-[#3987e5]/15 dark:text-[#3987e5]',
-  Transport: 'bg-[#eb6834]/10 text-[#eb6834] dark:bg-[#d95926]/15 dark:text-[#d95926]',
-  Casă: 'bg-[#0e93a8]/10 text-[#0b7d8f] dark:bg-[#17a3b8]/15 dark:text-[#17a3b8]',
-  Sănătate: 'bg-[#eda100]/10 text-[#a3720a] dark:bg-[#c98500]/15 dark:text-[#c98500]',
-  Cumpărături: 'bg-[#e87ba4]/10 text-[#e87ba4] dark:bg-[#d55181]/15 dark:text-[#d55181]',
-  Familie: 'bg-[#6f9f2a]/10 text-[#5c8422] dark:bg-[#84b833]/15 dark:text-[#84b833]',
-  Divertisment: 'bg-[#4a3aa7]/10 text-[#4a3aa7] dark:bg-[#9085e9]/15 dark:text-[#9085e9]',
-  Financiar: 'bg-[#e34948]/10 text-[#e34948] dark:bg-[#e66767]/15 dark:text-[#e66767]',
-  Altele: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300',
+  'Mâncare & Băutură': 'bg-cat-food/12 text-cat-food-ink',
+  Transport: 'bg-cat-transport/12 text-cat-transport-ink',
+  Casă: 'bg-cat-home/12 text-cat-home-ink',
+  Sănătate: 'bg-cat-health/14 text-cat-health-ink',
+  Cumpărături: 'bg-cat-shopping/14 text-cat-shopping-ink',
+  Familie: 'bg-cat-family/12 text-cat-family-ink',
+  Divertisment: 'bg-cat-fun/12 text-cat-fun-ink',
+  Financiar: 'bg-cat-finance/12 text-cat-finance-ink',
+  Altele: 'bg-cat-other/15 text-cat-other-ink',
 };
 
 export function isCategory(value: string | null): value is Category {

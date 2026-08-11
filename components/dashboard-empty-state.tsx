@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Camera, Plus, Repeat2, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { delay } from '@/lib/utils';
 
 /**
  * Shown until the very first expense exists. The metric cards are all zeros
@@ -10,9 +11,14 @@ import { Card, CardContent } from '@/components/ui/card';
  */
 export function DashboardEmptyState() {
   return (
-    <Card>
-      <CardContent className="flex flex-col items-center gap-4 py-8 text-center">
-        <div className="bg-muted text-muted-foreground flex h-14 w-14 items-center justify-center rounded-2xl">
+    <Card className="sb-rise relative overflow-hidden" style={delay(60)}>
+      {/* The one screen with no data on it, so the palette carries it instead. */}
+      <div
+        aria-hidden
+        className="from-chart-accent/12 pointer-events-none absolute inset-x-0 top-0 h-32 bg-linear-to-b to-transparent"
+      />
+      <CardContent className="relative flex flex-col items-center gap-4 py-8 text-center">
+        <div className="bg-primary text-primary-foreground shadow-primary/25 sb-pop flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg">
           <ScanLine className="h-7 w-7" />
         </div>
         <div className="flex flex-col gap-1.5">

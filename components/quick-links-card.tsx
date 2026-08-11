@@ -3,6 +3,7 @@ import { ChartColumnIncreasing, ChevronRight, Repeat2, Target } from 'lucide-rea
 import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatListDate } from '@/lib/dashboard/format';
+import { delay } from '@/lib/utils';
 
 export interface RecurringSummary {
   activeCount: number;
@@ -23,16 +24,16 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="hover:bg-muted/60 -mx-2 flex items-center gap-3 rounded-xl px-2 py-2.5 transition-colors"
+      className="sb-press group/link hover:bg-muted/60 -mx-2 flex items-center gap-3 rounded-xl px-2 py-2.5"
     >
-      <div className="bg-muted text-muted-foreground flex h-9 w-9 flex-none items-center justify-center rounded-lg">
+      <div className="bg-muted text-muted-foreground group-hover/link:bg-accent group-hover/link:text-accent-foreground flex h-9 w-9 flex-none items-center justify-center rounded-lg transition-colors duration-200">
         <Icon className="h-4.5 w-4.5" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="text-foreground text-sm font-medium">{label}</span>
         <span className="text-muted-foreground truncate text-xs">{detail}</span>
       </div>
-      <ChevronRight className="text-muted-foreground/60 h-4 w-4 flex-none" />
+      <ChevronRight className="text-muted-foreground/60 h-4 w-4 flex-none transition-transform duration-200 group-hover/link:translate-x-0.5" />
     </Link>
   );
 }
@@ -51,7 +52,7 @@ export function QuickLinksCard({
   budgetCount: number;
 }) {
   return (
-    <Card>
+    <Card className="sb-rise" style={delay(430)}>
       <CardContent className="flex flex-col">
         <QuickLink
           href="/recurring"

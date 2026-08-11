@@ -59,10 +59,11 @@ Track your expenses by photographing receipts — no manual entry. Snap a photo,
 - **Household sharing** — create a household and invite others by email. Everyone contributes from their own account and sees the combined totals, and the dashboard can be filtered to one member or just yourself. Owners can cancel invitations and remove members; members can leave. Access is enforced by Postgres row-level security, not just in the UI.
 - **Budgets** — a monthly limit on the total and/or per category. The dashboard shows how much is used, what's left, and where the month lands at the current pace, so going over is visible days before it happens rather than after. In a household the budget can cover everyone's pooled spending or just your own; which one you see follows the same member filter as the rest of the dashboard.
 - **Dashboard insights** — current vs. previous month comparison, average daily spend, top category, biggest expense, and a 30-day spending chart that shades the current month apart from the previous one. Any past month can be selected, and the whole dashboard re-scopes to it.
+- **Charts** — the daily and monthly plots share one column chart: hairline gridlines, a dashed average reference line, a direct label on the peak, and hover/arrow-key readout of any column. Every chart also renders a visually hidden table of the same numbers, so a value is never reachable only by pointer. Category spending gets a stacked composition bar above the ranked list, with the two cross-highlighting each other.
 - **12-month analysis** — totals per month against the average, the calendar-year total, and a per-category trend showing which categories are creeping up. Summed in Postgres rather than in the app, so a year of a shared household's expenses is never pulled into memory to be added up.
 - **Category breakdown** — spending by category for the current month, with a searchable category/subcategory picker when logging an expense.
 - **History** — search, filter (category, month), and sort every expense, receipt or manual.
-- **Light and dark theme** — a toggle in the dashboard header cycles automatic → light → dark. Automatic follows the operating system and keeps following it while the app is open. The choice is remembered and applied before the first paint, so reopening the app never flashes the wrong theme.
+- **Themes and colour palettes** — the dashboard header opens an appearance menu with two independent choices: the theme (automatic / light / dark) and one of four palettes — Smarald, Ocean, Apus, Levănțică. Automatic follows the operating system and keeps following it while the app is open. Both choices are remembered and applied before the first paint, so reopening the app never flashes the wrong colours. Category colours deliberately stay fixed across palettes: they identify a category, and repainting Transport because you changed accent would break what the reader already learned. Budget status (within / near / over) is likewise on reserved semantic colours rather than the accent.
 - **Google sign-in** — auth via Supabase, no separate SnapBudget password.
 
 ## Stack
@@ -78,7 +79,8 @@ Track your expenses by photographing receipts — no manual entry. Snap a photo,
 
 ```
 app/                  # Next.js App Router routes (dashboard, history, household, recurring, budgets, analytics, receipts)
-components/           # Reusable UI components (shadcn/ui primitives under components/ui)
+app/globals.css       # Design tokens: the four palettes, category + status colours, motion primitives
+components/           # Reusable UI components (shadcn/ui primitives under components/ui, charts under components/charts)
 lib/                  # Supabase clients, OCR, categorization, dashboard aggregation
 __tests__/            # Vitest unit tests for the pure date/money logic
 supabase/migrations/  # SQL migrations: schema, RLS policies, pg_cron job, aggregate RPC

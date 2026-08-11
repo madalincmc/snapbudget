@@ -1,8 +1,8 @@
 import { notFound, redirect } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isCategory } from '@/lib/categories';
+import { delay } from '@/lib/utils';
+import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,24 +48,19 @@ export default async function ReceiptDetailPage({
   return (
     <div className="flex flex-1 justify-center px-6 py-10">
       <div className="flex w-full max-w-lg flex-col gap-6">
-        <Button
-          variant="link"
-          className="self-start px-0"
-          nativeButton={false}
-          render={<Link href={backHref} />}
-        >
-          <ArrowLeft />
-          {backHref === '/history' ? 'Înapoi la istoric' : 'Înapoi la dashboard'}
-        </Button>
-
-        <h1 className="text-foreground text-xl font-semibold">Detalii bon</h1>
+        <PageHeader
+          title="Detalii bon"
+          backHref={backHref}
+          backLabel={backHref === '/history' ? 'Înapoi la istoric' : 'Înapoi la dashboard'}
+        />
 
         {signedUrlData?.signedUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={signedUrlData.signedUrl}
             alt="Bon"
-            className="bg-card max-h-80 w-full rounded-lg object-contain"
+            className="bg-card sb-rise ring-border/70 max-h-80 w-full rounded-2xl object-contain ring-1"
+            style={delay(60)}
           />
         )}
 

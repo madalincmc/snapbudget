@@ -1,44 +1,66 @@
+import type * as React from 'react';
 import { Minus, TrendingDown, TrendingUp } from 'lucide-react';
-import { CATEGORY_FILL_CLASS } from '@/lib/categories';
+import { CATEGORY_BAR_CLASS, CATEGORY_FILL_CLASS, CATEGORY_VAR } from '@/lib/categories';
 import { cn } from '@/lib/utils';
+import type { Category } from '@/lib/categories';
 import type { CategoryTrend } from '@/lib/analytics';
 
-const SPARK_WIDTH = 64;
-const SPARK_HEIGHT = 18;
+const SPARK_WIDTH = 68;
+const SPARK_HEIGHT = 20;
+const SPARK_PAD = 2;
 
 /**
- * A sparkline rather than a number per month: the question this answers is
- * "which way is this going", and twelve figures per category would bury that
- * under 108 numbers on a phone screen.
+ * A line rather than a number per month: the question this answers is "which
+ * way is this going", and twelve figures per category would bury that under
+ * 108 numbers on a phone screen. It replaced twelve micro-bars — at 5px apart
+ * the bars encoded the shape as a texture, where a line states it.
+ *
+ * The mark specs in the design system are written for full charts; a 68×20
+ * sparkline scales them down (1.5px line, 3px end dot) or the marks would be
+ * most of the plot. The end dot is on the latest month, which is the value the
+ * change badge beside it is about.
  */
-function Sparkline({ values, className }: { values: number[]; className: string }) {
+function Sparkline({ values, category }: { values: number[]; category: Category }) {
   const max = Math.max(...values, 0);
-  if (max <= 0) return null;
+  if (max <= 0 || values.length < 2) return null;
 
-  const slot = SPARK_WIDTH / values.length;
-  const barWidth = Math.max(slot * 0.6, 1);
+  const stepX = (SPARK_WIDTH - SPARK_PAD * 2) / (values.length - 1);
+  const scaleY = (value: number) =>
+    SPARK_HEIGHT - SPARK_PAD - (value / max) * (SPARK_HEIGHT - SPARK_PAD * 2);
+
+  const points = values.map((value, i) => [SPARK_PAD + i * stepX, scaleY(value)] as const);
+  const line = points.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`);
+  const area = [
+    ...line,
+    `L${points[points.length - 1][0].toFixed(1)} ${SPARK_HEIGHT}`,
+    `L${points[0][0].toFixed(1)} ${SPARK_HEIGHT}`,
+    'Z',
+  ].join(' ');
+  const [lastX, lastY] = points[points.length - 1];
 
   return (
     <svg
       viewBox={`0 0 ${SPARK_WIDTH} ${SPARK_HEIGHT}`}
-      className="h-4 w-16 flex-none"
+      className="h-5 w-[68px] flex-none overflow-visible"
       aria-hidden
       focusable="false"
     >
-      {values.map((value, i) => {
-        const height = value > 0 ? Math.max((value / max) * SPARK_HEIGHT, 1.5) : 0;
-        return (
-          <rect
-            key={i}
-            x={i * slot + (slot - barWidth) / 2}
-            y={SPARK_HEIGHT - height}
-            width={barWidth}
-            height={height}
-            rx={0.5}
-            className={cn('opacity-70', className)}
-          />
-        );
-      })}
+      <path d={area} className={CATEGORY_FILL_CLASS[category]} opacity={0.12} />
+      <path
+        d={line.join(' ')}
+        fill="none"
+        stroke={CATEGORY_VAR[category]}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+        // Drawn left to right on first paint. The dash length is a generous
+        // upper bound on the path — measuring it would mean a client component
+        // and a layout effect for a 68px decoration.
+        className="sb-draw"
+        style={{ '--draw-length': 130 } as React.CSSProperties}
+      />
+      <circle cx={lastX} cy={lastY} r={1.8} fill={CATEGORY_VAR[category]} />
     </svg>
   );
 }
@@ -56,11 +78,7 @@ function ChangeBadge({ changePercent }: { changePercent: number | null }) {
     <span
       className={cn(
         'inline-flex items-center gap-0.5 text-xs font-medium tabular-nums',
-        flat
-          ? 'text-muted-foreground'
-          : up
-            ? 'text-red-600 dark:text-red-400'
-            : 'text-emerald-600 dark:text-emerald-400',
+        flat ? 'text-muted-foreground' : up ? 'text-danger-ink' : 'text-ok-ink',
       )}
     >
       {flat ? (
@@ -80,7 +98,9 @@ export function CategoryTrendList({ trends }: { trends: CategoryTrend[] }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-muted-foreground text-sm font-medium">Categorii în timp</h2>
+        <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+          Categorii în timp
+        </h2>
         <span className="text-muted-foreground/70 text-xs">ultima lună vs. media</span>
       </div>
 
@@ -88,22 +108,27 @@ export function CategoryTrendList({ trends }: { trends: CategoryTrend[] }) {
         <p className="text-muted-foreground text-sm">Nicio cheltuială de analizat încă.</p>
       ) : (
         <ul className="divide-border flex flex-col divide-y">
-          {trends.map((trend) => (
+          {trends.map((trend, index) => (
             <li
               key={trend.category}
-              className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
+              style={{ '--sb-delay': `${index * 45}ms` } as React.CSSProperties}
+              className="sb-rise flex items-center gap-2.5 py-2.5 first:pt-0 last:pb-0"
             >
+              <span
+                className={cn('h-2 w-2 flex-none rounded-full', CATEGORY_BAR_CLASS[trend.category])}
+                aria-hidden
+              />
               <span className="text-foreground min-w-0 flex-1 truncate text-sm">
                 {trend.category}
               </span>
 
-              <Sparkline values={trend.monthly} className={CATEGORY_FILL_CLASS[trend.category]} />
+              <Sparkline values={trend.monthly} category={trend.category} />
 
-              <span className="text-muted-foreground w-20 flex-none text-right text-sm tabular-nums">
+              <span className="text-muted-foreground w-18 flex-none text-right text-sm tabular-nums">
                 {trend.total.toFixed(0)} lei
               </span>
 
-              <span className="w-16 flex-none text-right">
+              <span className="w-14 flex-none text-right">
                 <ChangeBadge changePercent={trend.changePercent} />
               </span>
             </li>

@@ -1,3 +1,4 @@
+import type * as React from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import type { ReceiptRow } from '@/lib/dashboard/aggregate';
@@ -27,10 +28,10 @@ export function ReceiptsList({
         {receipts.length > 0 && (
           <Link
             href="/history"
-            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs transition-colors"
+            className="text-muted-foreground hover:text-foreground group/all inline-flex items-center gap-1 text-xs transition-colors"
           >
             Vezi tot
-            <ArrowRight className="h-3 w-3" />
+            <ArrowRight className="h-3 w-3 transition-transform duration-200 group-hover/all:translate-x-0.5" />
           </Link>
         )}
       </div>
@@ -39,7 +40,7 @@ export function ReceiptsList({
         <p className="text-muted-foreground text-sm">Nicio cheltuială încă.</p>
       ) : (
         <ul className="divide-border flex flex-col divide-y">
-          {receipts.map((r) => {
+          {receipts.map((r, index) => {
             const creatorName =
               meUserId && r.user_id !== meUserId
                 ? (creators?.[r.user_id]?.displayName ?? null)
@@ -47,10 +48,14 @@ export function ReceiptsList({
             const isOther = Boolean(meUserId && r.user_id !== meUserId);
 
             return (
-              <li key={r.id}>
+              <li
+                key={r.id}
+                style={{ '--sb-delay': `${index * 50}ms` } as React.CSSProperties}
+                className="sb-rise"
+              >
                 <Link
                   href={`/receipts/${r.id}`}
-                  className="hover:bg-muted/50 -mx-2 flex items-center gap-3 rounded-lg px-2 py-3 transition-colors"
+                  className="sb-press hover:bg-muted/50 -mx-2 flex items-center gap-3 rounded-lg px-2 py-3"
                 >
                   <ReceiptThumbnail source={r.source} category={r.category} />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">

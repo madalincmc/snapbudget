@@ -32,11 +32,14 @@ export function MonthPicker({ month, currentMonth }: { month: MonthKey; currentM
   }
 
   return (
-    <div className="flex items-center gap-1">
+    // A pill rather than three loose controls: the picker sits alone between
+    // the header and the hero card, and without a container of its own it read
+    // as part of whichever was nearer.
+    <div className="bg-muted/70 ring-border/60 flex items-center gap-0.5 rounded-full p-0.5 ring-1">
       <Button
         variant="ghost"
         size="icon-sm"
-        className="text-muted-foreground"
+        className="text-muted-foreground hover:bg-card rounded-full transition-transform active:scale-90"
         onClick={() => goTo(shiftMonthKey(month, -1))}
       >
         <ChevronLeft />
@@ -46,14 +49,14 @@ export function MonthPicker({ month, currentMonth }: { month: MonthKey; currentM
       {/* first-letter, not `capitalize`: the latter title-cases every word, so
           "Luna aceasta" came out "Luna Aceasta" — wrong in Romanian, where
           only the first word of a phrase takes a capital. */}
-      <span className="text-foreground min-w-24 text-center text-sm font-medium first-letter:uppercase">
+      <span className="text-foreground min-w-28 text-center text-sm font-medium first-letter:uppercase">
         {isCurrent ? 'Luna aceasta' : monthKeyLabel(month)}
       </span>
 
       <Button
         variant="ghost"
         size="icon-sm"
-        className="text-muted-foreground"
+        className="text-muted-foreground hover:bg-card rounded-full transition-transform active:scale-90 disabled:opacity-30"
         disabled={isCurrent}
         onClick={() => goTo(shiftMonthKey(month, 1))}
       >

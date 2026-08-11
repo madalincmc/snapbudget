@@ -6,7 +6,7 @@
  * The theme is chosen by the user, not by the OS, so `dark:` has to follow the
  * attribute the toggle writes. Tailwind v4 points that variant at
  * prefers-color-scheme by default — leaving it there would split the app in
- * two: the design tokens below would obey the toggle while all 84 `dark:`
+ * two: the design tokens below would obey the toggle while all the `dark:`
  * utilities kept obeying the operating system.
  *
  * "System" is not a third state here. The inline script in the root layout
@@ -21,19 +21,6 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -50,6 +37,47 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
+  /*
+   * Chart tokens. `chart-accent` is the palette's own hue and carries every
+   * single-series plot (the daily and monthly spend columns); `chart-grid` is
+   * the one-step-off-surface hairline. Registered here so `fill-chart-accent`
+   * and `stroke-chart-grid` exist as utilities and SVG marks can be tokenised
+   * the same way boxes are.
+   */
+  --color-chart-accent: var(--chart-accent);
+  --color-chart-accent-soft: var(--chart-accent-soft);
+  --color-chart-grid: var(--chart-grid);
+
+  /* Status. Reserved meaning — never used for series identity. */
+  --color-ok: var(--ok);
+  --color-ok-ink: var(--ok-ink);
+  --color-warn: var(--warn);
+  --color-warn-ink: var(--warn-ink);
+  --color-danger: var(--danger);
+  --color-danger-ink: var(--danger-ink);
+
+  /* Category identity. `-ink` is the same hue re-stepped to clear 4.5:1 as
+     text on its surface; the plain token is the mark colour. */
+  --color-cat-food: var(--cat-food);
+  --color-cat-food-ink: var(--cat-food-ink);
+  --color-cat-transport: var(--cat-transport);
+  --color-cat-transport-ink: var(--cat-transport-ink);
+  --color-cat-home: var(--cat-home);
+  --color-cat-home-ink: var(--cat-home-ink);
+  --color-cat-health: var(--cat-health);
+  --color-cat-health-ink: var(--cat-health-ink);
+  --color-cat-shopping: var(--cat-shopping);
+  --color-cat-shopping-ink: var(--cat-shopping-ink);
+  --color-cat-family: var(--cat-family);
+  --color-cat-family-ink: var(--cat-family-ink);
+  --color-cat-fun: var(--cat-fun);
+  --color-cat-fun-ink: var(--cat-fun-ink);
+  --color-cat-finance: var(--cat-finance);
+  --color-cat-finance-ink: var(--cat-finance-ink);
+  --color-cat-other: var(--cat-other);
+  --color-cat-other-ink: var(--cat-other-ink);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -57,92 +85,408 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/*
- * Warm neutrals plus a single emerald accent.
+/* ==========================================================================
+ * Tokens that never move
  *
- * Every neutral carries a trace of chroma on a ~75° hue, which is what makes
- * the greys read as warm rather than the default cold slate. The page sits on
- * a cream `--background` and cards are pure white, so a card lifts off the
- * page by being *brighter* than it — that lift is the hierarchy, which is why
- * pages no longer paint their own `bg-muted/40` backdrop.
+ * Two families are deliberately *outside* the palettes.
  *
- * Emerald is the only saturated colour in the chrome: primary buttons, the
- * scan button, the active nav tab, and "within budget". Category hues are
- * deliberately excluded from that role — see lib/categories.ts.
- */
+ * Category hues encode identity: a reader who learned that Transport is orange
+ * must not have it repainted because they switched accent colour. Every hue
+ * and its `-ink` step is checked with the palette validator — the eight carry
+ * ΔE 12.9 (light) / 10.5 (dark) on the worst adjacent pair under deuteranopia,
+ * and every `-ink` clears 4.5:1 as text on its own surface.
+ *
+ * Status colours are reserved: ok / warn / danger mean a state, never a
+ * series. Binding "within budget" to the accent instead would have made the
+ * coral palette read good→warning→over as coral→amber→red, three warm hues
+ * with no severity gradient between them.
+ * ========================================================================== */
 :root,
 [data-theme='light'] {
-  --background: oklch(0.978 0.005 85);
-  --foreground: oklch(0.185 0.004 75);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.185 0.004 75);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.185 0.004 75);
-  --primary: oklch(0.575 0.116 162);
-  --primary-foreground: oklch(0.99 0.01 160);
-  --secondary: oklch(0.958 0.006 85);
-  --secondary-foreground: oklch(0.24 0.005 75);
-  --muted: oklch(0.958 0.006 85);
-  --muted-foreground: oklch(0.545 0.009 75);
-  --accent: oklch(0.952 0.012 160);
-  --accent-foreground: oklch(0.42 0.09 162);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.912 0.006 85);
-  --input: oklch(0.912 0.006 85);
-  --ring: oklch(0.575 0.116 162);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
   --radius: 0.875rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  --destructive: oklch(0.577 0.245 27.325);
+
+  --ok: oklch(0.575 0.13 158);
+  --ok-ink: oklch(0.47 0.112 158);
+  --warn: oklch(0.67 0.148 68);
+  --warn-ink: oklch(0.52 0.12 62);
+  --danger: oklch(0.58 0.2 25);
+  --danger-ink: oklch(0.53 0.2 25);
+
+  --cat-food: oklch(0.575 0.163 255.5);
+  --cat-food-ink: oklch(0.555 0.163 255.5);
+  --cat-transport: oklch(0.671 0.175 40.6);
+  --cat-transport-ink: oklch(0.581 0.175 40.6);
+  --cat-home: oklch(0.61 0.104 212.7);
+  --cat-home-ink: oklch(0.55 0.097 212.7);
+  --cat-health: oklch(0.764 0.161 75.1);
+  --cat-health-ink: oklch(0.564 0.121 75.1);
+  --cat-shopping: oklch(0.716 0.141 357.4);
+  --cat-shopping-ink: oklch(0.576 0.141 357.4);
+  --cat-family: oklch(0.645 0.153 129.5);
+  --cat-family-ink: oklch(0.545 0.148 129.5);
+  --cat-fun: oklch(0.433 0.167 283.6);
+  --cat-fun-ink: oklch(0.433 0.167 283.6);
+  --cat-finance: oklch(0.623 0.191 24.9);
+  --cat-finance-ink: oklch(0.583 0.191 24.9);
+  --cat-other: oklch(0.712 0.013 286.1);
+  --cat-other-ink: oklch(0.562 0.013 286.1);
 }
 
 [data-theme='dark'] {
-  /* The same warm hue held through the dark ramp, so switching themes reads
-     as the lights going down rather than as a different product. Cards stay
-     lighter than the page here too, keeping the lift direction consistent. */
+  --destructive: oklch(0.704 0.191 22.216);
+
+  --ok: oklch(0.72 0.14 160);
+  --ok-ink: oklch(0.8 0.13 160);
+  --warn: oklch(0.79 0.14 78);
+  --warn-ink: oklch(0.84 0.12 80);
+  --danger: oklch(0.66 0.19 25);
+  --danger-ink: oklch(0.74 0.159 25);
+
+  --cat-food: oklch(0.622 0.161 255.1);
+  --cat-food-ink: oklch(0.622 0.161 255.1);
+  --cat-transport: oklch(0.622 0.173 40.1);
+  --cat-transport-ink: oklch(0.632 0.173 40.1);
+  --cat-home: oklch(0.658 0.111 211.3);
+  --cat-home-ink: oklch(0.658 0.111 211.3);
+  --cat-health: oklch(0.67 0.143 73.2);
+  --cat-health-ink: oklch(0.67 0.143 73.2);
+  --cat-shopping: oklch(0.622 0.171 0.8);
+  --cat-shopping-ink: oklch(0.632 0.171 0.8);
+  --cat-family: oklch(0.664 0.157 129.3);
+  --cat-family-ink: oklch(0.664 0.157 129.3);
+  --cat-fun: oklch(0.67 0.145 286.8);
+  --cat-fun-ink: oklch(0.67 0.145 286.8);
+  --cat-finance: oklch(0.669 0.159 22.3);
+  --cat-finance-ink: oklch(0.669 0.159 22.3);
+  --cat-other: oklch(0.639 0.012 286.1);
+  --cat-other-ink: oklch(0.639 0.012 286.1);
+}
+
+/* ==========================================================================
+ * The four palettes
+ *
+ * A palette moves two things and nothing else: the accent hue, and the trace
+ * of chroma carried through the neutral ramp. That trace is what makes
+ * Smarald's greys read warm and Ocean's read cool — the surfaces are the same
+ * lightnesses in both, so the hierarchy (page dim, card bright) never changes
+ * and a component tuned in one palette is tuned in all four.
+ *
+ * Every accent sits at L 0.53 light / 0.72 dark with its chroma fitted to the
+ * sRGB gamut at that hue, which is what keeps white-on-accent above 4.5:1 in
+ * light and the accent above 3:1 on the dark card.
+ *
+ * Ordering matters: the `[data-theme]` blocks are 0,1,0 and the palette blocks
+ * below are 0,2,0, so a palette always wins over the mode default without
+ * having to restate the whole ramp. `data-theme` is always present — the
+ * server renders `light` and the head script rewrites it — so the compound
+ * selectors never miss.
+ * ========================================================================== */
+
+/* --- Smarald: warm cream neutrals, emerald accent (the default) ----------- */
+:root,
+[data-theme='light'] {
+  --background: oklch(0.978 0.005 85);
+  --foreground: oklch(0.185 0.004 85);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.185 0.004 85);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.185 0.004 85);
+  --primary: oklch(0.53 0.118 162);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.958 0.006 85);
+  --secondary-foreground: oklch(0.24 0.005 85);
+  --muted: oklch(0.958 0.006 85);
+  --muted-foreground: oklch(0.545 0.009 85);
+  --accent: oklch(0.952 0.014 162);
+  --accent-foreground: oklch(0.42 0.09 162);
+  --border: oklch(0.912 0.006 85);
+  --input: oklch(0.912 0.006 85);
+  --ring: oklch(0.53 0.118 162);
+
+  --chart-accent: oklch(0.575 0.116 162);
+  --chart-accent-soft: oklch(0.8 0.08 162);
+  --chart-grid: oklch(0.93 0.005 85);
+
+  --glow-a: oklch(0.9 0.06 162 / 0.5);
+  --glow-b: oklch(0.92 0.05 210 / 0.4);
+}
+
+[data-theme='dark'] {
   --background: oklch(0.155 0.004 75);
   --foreground: oklch(0.975 0.003 85);
   --card: oklch(0.212 0.005 75);
   --card-foreground: oklch(0.975 0.003 85);
   --popover: oklch(0.212 0.005 75);
   --popover-foreground: oklch(0.975 0.003 85);
-  --primary: oklch(0.7 0.135 162);
+  --primary: oklch(0.72 0.13 162);
   --primary-foreground: oklch(0.18 0.03 162);
   --secondary: oklch(0.275 0.005 75);
   --secondary-foreground: oklch(0.975 0.003 85);
   --muted: oklch(0.275 0.005 75);
   --muted-foreground: oklch(0.715 0.008 80);
-  --accent: oklch(0.3 0.028 162);
+  --accent: oklch(0.3 0.03 162);
   --accent-foreground: oklch(0.85 0.1 162);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 11%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.7 0.135 162);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --border: oklch(0.33 0.005 75);
+  --input: oklch(0.36 0.006 75);
+  --ring: oklch(0.72 0.13 162);
+
+  --chart-accent: oklch(0.72 0.13 162);
+  --chart-accent-soft: oklch(0.45 0.08 162);
+  --chart-grid: oklch(0.3 0.005 75);
+
+  --glow-a: oklch(0.5 0.12 162 / 0.22);
+  --glow-b: oklch(0.45 0.1 210 / 0.18);
+}
+
+/* --- Ocean: cool slate neutrals, deep blue accent ------------------------- */
+[data-theme='light'][data-palette='ocean'] {
+  --background: oklch(0.978 0.008 250);
+  --foreground: oklch(0.185 0.006 250);
+  --card-foreground: oklch(0.185 0.006 250);
+  --popover-foreground: oklch(0.185 0.006 250);
+  --primary: oklch(0.53 0.133 244);
+  --secondary: oklch(0.958 0.01 250);
+  --secondary-foreground: oklch(0.24 0.008 250);
+  --muted: oklch(0.958 0.01 250);
+  --muted-foreground: oklch(0.545 0.014 250);
+  --accent: oklch(0.952 0.022 244);
+  --accent-foreground: oklch(0.42 0.1 244);
+  --border: oklch(0.912 0.01 250);
+  --input: oklch(0.912 0.01 250);
+  --ring: oklch(0.53 0.133 244);
+
+  --chart-accent: oklch(0.575 0.14 244);
+  --chart-accent-soft: oklch(0.8 0.08 244);
+  --chart-grid: oklch(0.93 0.008 250);
+
+  --glow-a: oklch(0.9 0.07 244 / 0.5);
+  --glow-b: oklch(0.92 0.06 190 / 0.4);
+}
+
+[data-theme='dark'][data-palette='ocean'] {
+  --background: oklch(0.155 0.008 250);
+  --foreground: oklch(0.975 0.005 250);
+  --card: oklch(0.212 0.01 250);
+  --card-foreground: oklch(0.975 0.005 250);
+  --popover: oklch(0.212 0.01 250);
+  --popover-foreground: oklch(0.975 0.005 250);
+  --primary: oklch(0.72 0.13 244);
+  --primary-foreground: oklch(0.18 0.04 244);
+  --secondary: oklch(0.275 0.01 250);
+  --muted: oklch(0.275 0.01 250);
+  --muted-foreground: oklch(0.715 0.013 250);
+  --accent: oklch(0.3 0.04 244);
+  --accent-foreground: oklch(0.85 0.1 244);
+  --border: oklch(0.33 0.01 250);
+  --input: oklch(0.36 0.012 250);
+  --ring: oklch(0.72 0.13 244);
+
+  --chart-accent: oklch(0.72 0.13 244);
+  --chart-accent-soft: oklch(0.45 0.09 244);
+  --chart-grid: oklch(0.3 0.01 250);
+
+  --glow-a: oklch(0.5 0.13 244 / 0.24);
+  --glow-b: oklch(0.45 0.1 190 / 0.18);
+}
+
+/* --- Apus: sand neutrals, terracotta accent ------------------------------- */
+[data-theme='light'][data-palette='apus'] {
+  --background: oklch(0.978 0.009 60);
+  --foreground: oklch(0.185 0.007 60);
+  --card-foreground: oklch(0.185 0.007 60);
+  --popover-foreground: oklch(0.185 0.007 60);
+  --primary: oklch(0.53 0.14 26);
+  --secondary: oklch(0.958 0.011 60);
+  --secondary-foreground: oklch(0.24 0.009 60);
+  --muted: oklch(0.958 0.011 60);
+  --muted-foreground: oklch(0.545 0.016 60);
+  --accent: oklch(0.952 0.024 26);
+  --accent-foreground: oklch(0.44 0.12 26);
+  --border: oklch(0.912 0.011 60);
+  --input: oklch(0.912 0.011 60);
+  --ring: oklch(0.53 0.14 26);
+
+  --chart-accent: oklch(0.6 0.155 30);
+  --chart-accent-soft: oklch(0.82 0.09 40);
+  --chart-grid: oklch(0.93 0.009 60);
+
+  --glow-a: oklch(0.9 0.08 30 / 0.5);
+  --glow-b: oklch(0.93 0.07 75 / 0.45);
+}
+
+[data-theme='dark'][data-palette='apus'] {
+  --background: oklch(0.155 0.009 50);
+  --foreground: oklch(0.975 0.005 50);
+  --card: oklch(0.212 0.011 50);
+  --card-foreground: oklch(0.975 0.005 50);
+  --popover: oklch(0.212 0.011 50);
+  --popover-foreground: oklch(0.975 0.005 50);
+  --primary: oklch(0.72 0.13 26);
+  --primary-foreground: oklch(0.18 0.04 26);
+  --secondary: oklch(0.275 0.011 50);
+  --muted: oklch(0.275 0.011 50);
+  --muted-foreground: oklch(0.715 0.015 50);
+  --accent: oklch(0.3 0.04 26);
+  --accent-foreground: oklch(0.85 0.1 26);
+  --border: oklch(0.33 0.011 50);
+  --input: oklch(0.36 0.013 50);
+  --ring: oklch(0.72 0.13 26);
+
+  --chart-accent: oklch(0.72 0.14 34);
+  --chart-accent-soft: oklch(0.45 0.09 34);
+  --chart-grid: oklch(0.3 0.011 50);
+
+  --glow-a: oklch(0.5 0.14 30 / 0.24);
+  --glow-b: oklch(0.48 0.11 75 / 0.18);
+}
+
+/* --- Levănțică: mauve neutrals, violet accent ----------------------------- */
+[data-theme='light'][data-palette='levantica'] {
+  --background: oklch(0.978 0.007 305);
+  --foreground: oklch(0.185 0.006 305);
+  --card-foreground: oklch(0.185 0.006 305);
+  --popover-foreground: oklch(0.185 0.006 305);
+  --primary: oklch(0.53 0.14 302);
+  --secondary: oklch(0.958 0.009 305);
+  --secondary-foreground: oklch(0.24 0.007 305);
+  --muted: oklch(0.958 0.009 305);
+  --muted-foreground: oklch(0.545 0.013 305);
+  --accent: oklch(0.952 0.022 302);
+  --accent-foreground: oklch(0.43 0.11 302);
+  --border: oklch(0.912 0.009 305);
+  --input: oklch(0.912 0.009 305);
+  --ring: oklch(0.53 0.14 302);
+
+  --chart-accent: oklch(0.58 0.15 302);
+  --chart-accent-soft: oklch(0.81 0.09 302);
+  --chart-grid: oklch(0.93 0.007 305);
+
+  --glow-a: oklch(0.9 0.08 302 / 0.5);
+  --glow-b: oklch(0.92 0.06 340 / 0.4);
+}
+
+[data-theme='dark'][data-palette='levantica'] {
+  --background: oklch(0.155 0.007 305);
+  --foreground: oklch(0.975 0.004 305);
+  --card: oklch(0.212 0.009 305);
+  --card-foreground: oklch(0.975 0.004 305);
+  --popover: oklch(0.212 0.009 305);
+  --popover-foreground: oklch(0.975 0.004 305);
+  --primary: oklch(0.72 0.13 302);
+  --primary-foreground: oklch(0.18 0.04 302);
+  --secondary: oklch(0.275 0.009 305);
+  --muted: oklch(0.275 0.009 305);
+  --muted-foreground: oklch(0.715 0.012 305);
+  --accent: oklch(0.3 0.04 302);
+  --accent-foreground: oklch(0.85 0.1 302);
+  --border: oklch(0.33 0.009 305);
+  --input: oklch(0.36 0.011 305);
+  --ring: oklch(0.72 0.13 302);
+
+  --chart-accent: oklch(0.72 0.13 302);
+  --chart-accent-soft: oklch(0.45 0.09 302);
+  --chart-grid: oklch(0.3 0.009 305);
+
+  --glow-a: oklch(0.5 0.14 302 / 0.24);
+  --glow-b: oklch(0.45 0.1 340 / 0.18);
+}
+
+/* ==========================================================================
+ * Motion
+ *
+ * Everything here is opt-in per element and every rule is switched off wholesale
+ * under `prefers-reduced-motion` at the bottom of this file. Entrances are the
+ * only motion the app plays without being asked; the rest responds to a touch,
+ * a hover or a value change.
+ * ========================================================================== */
+@keyframes sb-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes sb-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sb-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Columns grow out of the baseline rather than fading in place: a bar chart
+   whose bars fade look like they are already at rest, where a bar that grows
+   restates that the height is the measurement. */
+@keyframes sb-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes sb-widen {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Columns animate `height` rather than `transform: scaleY()`. Scaling a bar up
+   from zero squashes its 4px rounded cap flat for the first frames, which
+   reads as the corner radius changing mid-flight; growing the box keeps the
+   cap the same shape the whole way. --sb-h is set inline per column. */
+@keyframes sb-column {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--sb-h, 0%);
+  }
+}
+
+@keyframes sb-draw {
+  from {
+    stroke-dashoffset: var(--draw-length, 1000);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes sb-shimmer {
+  from {
+    background-position: -150% 0;
+  }
+  to {
+    background-position: 250% 0;
+  }
 }
 
 @layer utilities {
@@ -153,6 +497,87 @@
      it stringifies a client-reference proxy into the class list instead. */
   .pb-nav {
     padding-bottom: calc(9rem + env(safe-area-inset-bottom));
+  }
+
+  /*
+   * Entrance primitives. `--sb-delay` is set per element (usually from a list
+   * index) so a column of cards arrives as a sequence instead of a slab; the
+   * cap keeps a long list from making the reader wait on the last item.
+   */
+  .sb-rise {
+    animation: sb-rise 0.5s var(--ease-out-soft) both;
+    animation-delay: var(--sb-delay, 0ms);
+  }
+
+  .sb-fade {
+    animation: sb-fade 0.4s ease-out both;
+    animation-delay: var(--sb-delay, 0ms);
+  }
+
+  .sb-pop {
+    animation: sb-pop 0.35s var(--ease-spring) both;
+    animation-delay: var(--sb-delay, 0ms);
+  }
+
+  .sb-grow {
+    transform-origin: bottom;
+    animation: sb-grow 0.6s var(--ease-out-soft) both;
+    animation-delay: var(--sb-delay, 0ms);
+  }
+
+  .sb-widen {
+    transform-origin: left;
+    animation: sb-widen 0.7s var(--ease-out-soft) both;
+    animation-delay: var(--sb-delay, 0ms);
+  }
+
+  .sb-column {
+    height: var(--sb-h, 0%);
+    animation: sb-column 0.55s var(--ease-out-soft) both;
+    animation-delay: var(--sb-delay, 0ms);
+  }
+
+  .sb-draw {
+    stroke-dasharray: var(--draw-length, 1000);
+    animation: sb-draw 0.9s var(--ease-out-soft) both;
+    animation-delay: var(--sb-delay, 0ms);
+  }
+
+  .sb-skeleton {
+    background-image: linear-gradient(
+      90deg,
+      var(--muted) 0%,
+      color-mix(in oklab, var(--muted), var(--card) 70%) 50%,
+      var(--muted) 100%
+    );
+    background-size: 200% 100%;
+    animation: sb-shimmer 1.6s linear infinite;
+  }
+
+  /* A press that moves. Applied to the whole tappable row rather than to an
+     inner element, so the feedback covers the target the thumb actually hit. */
+  .sb-press {
+    transition:
+      transform 0.18s var(--ease-out-soft),
+      background-color 0.18s ease;
+  }
+  .sb-press:active {
+    transform: scale(0.985);
+  }
+
+  /* The ambient wash behind the page. Two soft radial pools in the palette's
+     own hues — the one place the accent is allowed to touch a large area,
+     because at this opacity it tints rather than colours. Fixed, so it does
+     not travel with the scroll and turn into a visible gradient band. */
+  .sb-ambient::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(60rem 34rem at 12% -8%, var(--glow-a), transparent 70%),
+      radial-gradient(48rem 30rem at 105% 6%, var(--glow-b), transparent 70%);
   }
 }
 
@@ -165,5 +590,66 @@
   }
   html {
     @apply font-sans;
+  }
+
+  /*
+   * Switching palette or mode washes across the page instead of cutting. The
+   * rule is armed only while the appearance menu holds `data-theme-shift` on
+   * <html> — a few hundred milliseconds — because a permanent colour
+   * transition on every element would also slow down every hover and focus
+   * state in the app to 350ms. Deliberately not `all`: that would drag layout
+   * and transform properties in with it.
+   */
+  html[data-theme-shift] body,
+  html[data-theme-shift] body *,
+  html[data-theme-shift] body *::before,
+  html[data-theme-shift] body *::after {
+    transition:
+      background-color 0.35s ease,
+      border-color 0.35s ease,
+      color 0.35s ease,
+      fill 0.35s ease,
+      stroke 0.35s ease !important;
+  }
+}
+
+/* Route transitions. Content crossfades and lifts slightly; the fixed bottom
+   nav is pinned so the reader keeps one stationary anchor across the cut. */
+::view-transition-group(root) {
+  animation-duration: 260ms;
+}
+
+::view-transition-old(root) {
+  animation: 120ms ease-in both sb-fade reverse;
+}
+
+::view-transition-new(root) {
+  animation: 220ms var(--ease-out-soft) 60ms both sb-rise;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-rise,
+  .sb-fade,
+  .sb-pop,
+  .sb-grow,
+  .sb-widen,
+  .sb-column,
+  .sb-draw,
+  .sb-skeleton {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+
+  .sb-press:active {
+    transform: none;
+  }
+
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
   }
 }

@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Target, Trash2 } from 'lucide-react';
+import { Target, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { CATEGORIES } from '@/lib/categories';
+import { CATEGORIES, CATEGORY_BAR_CLASS } from '@/lib/categories';
 import { buildDashboardData, monthKeyOf, type ReceiptRow } from '@/lib/dashboard/aggregate';
 import { expensesSince, startOfMonth } from '@/lib/dashboard/query';
 import { getHouseholdMembership } from '@/lib/household/membership';
@@ -14,6 +14,7 @@ import {
   type BudgetScope,
 } from '@/lib/budgets';
 import { BudgetBar, BUDGET_TEXT_CLASS } from '@/components/budget-bar';
+import { PageHeader } from '@/components/page-header';
 import { BottomNav } from '@/components/bottom-nav';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -26,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+import { cn, delay } from '@/lib/utils';
 import { deleteBudget, saveBudget } from './actions';
 
 export default async function BudgetsPage({
@@ -91,31 +92,30 @@ export default async function BudgetsPage({
   return (
     <div className="pb-nav flex flex-1 justify-center px-4 pt-5">
       <div className="flex w-full max-w-lg flex-col gap-5">
-        <div className="flex items-center justify-between gap-2 px-1">
-          <h1 className="text-foreground text-lg font-semibold tracking-tight">Bugete</h1>
-          <Button
-            variant="link"
-            className="text-muted-foreground px-0"
-            nativeButton={false}
-            render={<Link href="/dashboard" />}
-          >
-            <ArrowLeft />
-            Dashboard
-          </Button>
-        </div>
+        <PageHeader
+          title="Bugete"
+          description={
+            scope === 'household'
+              ? 'Se compară cu toate cheltuielile gospodăriei. Orice membru le poate modifica.'
+              : 'Se compară doar cu cheltuielile tale.'
+          }
+        />
 
         {membership && (
-          <div className="bg-muted text-muted-foreground flex gap-1 rounded-full p-1 text-sm">
+          <div
+            className="bg-muted text-muted-foreground sb-fade flex gap-1 rounded-full p-1 text-sm"
+            style={delay(40)}
+          >
             {(['household', 'personal'] as const).map((target) => (
               <Link
                 key={target}
                 href={scopeHref(target)}
                 aria-current={scope === target ? 'page' : undefined}
                 className={cn(
-                  'flex-1 rounded-full px-3 py-1.5 text-center font-medium transition-colors',
+                  'flex-1 rounded-full px-3 py-1.5 text-center font-medium transition-all duration-200',
                   scope === target
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'hover:text-foreground',
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'hover:text-foreground active:scale-[0.98]',
                 )}
               >
                 {target === 'household' ? 'Gospodărie' : 'Doar eu'}
@@ -124,14 +124,8 @@ export default async function BudgetsPage({
           </div>
         )}
 
-        <p className="text-muted-foreground px-1 text-xs">
-          {scope === 'household'
-            ? 'Se compară cu toate cheltuielile gospodăriei. Orice membru poate modifica aceste bugete.'
-            : 'Se compară doar cu cheltuielile tale.'}
-        </p>
-
         {/* Overall budget */}
-        <Card>
+        <Card className="sb-rise" style={delay(90)}>
           <CardContent className="flex flex-col gap-4">
             <h2 className="text-foreground text-sm font-medium">Buget total lunar</h2>
 
@@ -160,6 +154,11 @@ export default async function BudgetsPage({
                 <BudgetBar
                   percentUsed={overview.overall.percentUsed}
                   status={overview.overall.status}
+                  projectedPercent={
+                    overview.overall.projected !== null && overview.overall.budget.amount > 0
+                      ? (overview.overall.projected / overview.overall.budget.amount) * 100
+                      : null
+                  }
                 />
                 <p className="text-muted-foreground text-xs tabular-nums">
                   {overview.overall.remaining >= 0
@@ -210,7 +209,7 @@ export default async function BudgetsPage({
         </Card>
 
         {/* Per-category limits */}
-        <Card>
+        <Card className="sb-rise" style={delay(160)}>
           <CardContent className="flex flex-col gap-4">
             <h2 className="text-foreground text-sm font-medium">Limite pe categorii</h2>
 
@@ -220,12 +219,25 @@ export default async function BudgetsPage({
               </p>
             ) : (
               <ul className="divide-border flex flex-col divide-y">
-                {CATEGORIES.filter((c) => overview.byCategory[c]).map((category) => {
+                {CATEGORIES.filter((c) => overview.byCategory[c]).map((category, index) => {
                   const progress = overview.byCategory[category]!;
                   return (
-                    <li key={category} className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0">
+                    <li
+                      key={category}
+                      style={delay(200 + index * 45)}
+                      className="sb-rise flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0"
+                    >
                       <div className="flex items-baseline justify-between gap-2">
-                        <span className="text-foreground truncate text-sm">{category}</span>
+                        <span className="flex min-w-0 items-baseline gap-2">
+                          <span
+                            className={cn(
+                              'h-2 w-2 flex-none translate-y-px rounded-full',
+                              CATEGORY_BAR_CLASS[category],
+                            )}
+                            aria-hidden
+                          />
+                          <span className="text-foreground truncate text-sm">{category}</span>
+                        </span>
                         <div className="flex flex-none items-center gap-1">
                           <span className="text-muted-foreground text-sm tabular-nums">
                             {progress.spent.toFixed(0)} / {progress.budget.amount.toFixed(0)} lei
@@ -306,9 +318,9 @@ export default async function BudgetsPage({
         </Card>
 
         {!overview.hasAny && (
-          <Card>
+          <Card className="sb-rise" style={delay(230)}>
             <CardContent className="flex flex-col items-center gap-3 py-6 text-center">
-              <div className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-2xl">
+              <div className="bg-accent text-accent-foreground flex h-12 w-12 items-center justify-center rounded-2xl">
                 <Target className="h-6 w-6" />
               </div>
               <p className="text-muted-foreground mx-auto max-w-xs text-sm">

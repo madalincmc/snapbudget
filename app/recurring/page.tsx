@@ -1,9 +1,11 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Pause, Play, Plus, Repeat2 } from 'lucide-react';
+import { Pause, Play, Plus, Repeat2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { formatListDate } from '@/lib/dashboard/format';
 import { FREQUENCY_LABEL, type RecurringExpense } from '@/lib/recurring';
+import { cn, delay } from '@/lib/utils';
+import { PageHeader } from '@/components/page-header';
 import { BottomNav } from '@/components/bottom-nav';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,25 +35,15 @@ export default async function RecurringPage() {
   return (
     <div className="pb-nav flex flex-1 justify-center px-4 pt-5">
       <div className="flex w-full max-w-lg flex-col gap-5">
-        <div className="flex items-center justify-between gap-2 px-1">
-          <h1 className="text-foreground text-lg font-semibold tracking-tight">
-            Cheltuieli recurente
-          </h1>
-          <Button
-            variant="link"
-            className="text-muted-foreground px-0"
-            nativeButton={false}
-            render={<Link href="/dashboard" />}
-          >
-            <ArrowLeft />
-            Dashboard
-          </Button>
-        </div>
+        <PageHeader
+          title="Cheltuieli recurente"
+          description="Chirie, abonamente, utilități — adăugate automat la scadență"
+        />
 
         {rules.length === 0 ? (
-          <Card>
+          <Card className="sb-rise" style={delay(60)}>
             <CardContent className="flex flex-col items-center gap-4 py-8 text-center">
-              <div className="bg-muted text-muted-foreground flex h-14 w-14 items-center justify-center rounded-2xl">
+              <div className="bg-accent text-accent-foreground sb-pop flex h-14 w-14 items-center justify-center rounded-2xl">
                 <Repeat2 className="h-7 w-7" />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -76,17 +68,22 @@ export default async function RecurringPage() {
           </Card>
         ) : (
           <>
-            <Card>
+            <Card className="sb-rise" style={delay(60)}>
               <CardContent>
                 <ul className="divide-border flex flex-col divide-y">
-                  {rules.map((rule) => (
-                    <li key={rule.id} className="flex items-center gap-3 py-3">
+                  {rules.map((rule, index) => (
+                    <li
+                      key={rule.id}
+                      style={delay(100 + index * 45)}
+                      className="sb-rise flex items-center gap-3 py-3"
+                    >
                       <div
-                        className={`flex h-10 w-10 flex-none items-center justify-center rounded-lg ${
+                        className={cn(
+                          'flex h-10 w-10 flex-none items-center justify-center rounded-xl transition-colors',
                           rule.paused
                             ? 'bg-muted text-muted-foreground/60'
-                            : 'bg-muted text-muted-foreground'
-                        }`}
+                            : 'bg-accent text-accent-foreground',
+                        )}
                       >
                         <Repeat2 className="h-5 w-5" />
                       </div>
@@ -138,7 +135,8 @@ export default async function RecurringPage() {
             <Button
               variant="outline"
               size="lg"
-              className="h-11 rounded-full"
+              className="sb-rise h-11 rounded-full"
+              style={delay(160)}
               nativeButton={false}
               render={<Link href="/recurring/new" />}
             >
