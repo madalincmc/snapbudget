@@ -12,7 +12,9 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+const admin = createClient(url, serviceKey, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
 
 const suffix = Date.now();
 const ownerEmail = `test-owner-${suffix}@snapbudget-test.local`;
@@ -38,7 +40,9 @@ function fatal(label, extra) {
 }
 
 async function signInAs(email) {
-  const client = createClient(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  const client = createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
   const { error } = await client.auth.signInWithPassword({ email, password });
   if (error) throw new Error(`sign-in failed for ${email}: ${error.message}`);
   return client;
@@ -73,13 +77,17 @@ try {
     .insert({ name: 'Test Household', owner_id: ownerId })
     .select('id')
     .single();
-  if (householdErr || !household) fatal('household insert returns the new row', householdErr?.message);
+  if (householdErr || !household)
+    fatal('household insert returns the new row', householdErr?.message);
   check('household insert returns the new row', true);
   householdId = household.id;
 
-  const { error: ownerMemberErr } = await owner
-    .from('household_members')
-    .insert({ household_id: householdId, user_id: ownerId, role: 'owner', display_name: 'Test Owner' });
+  const { error: ownerMemberErr } = await owner.from('household_members').insert({
+    household_id: householdId,
+    user_id: ownerId,
+    role: 'owner',
+    display_name: 'Test Owner',
+  });
   if (ownerMemberErr) fatal('owner joins as owner', ownerMemberErr.message);
   check('owner joins as owner', true);
 
@@ -110,7 +118,11 @@ try {
     .select('id, households(name)')
     .eq('status', 'pending')
     .ilike('email', memberEmail);
-  check('invitee sees their pending invitation', !bannerErr && (banner ?? []).length === 1, bannerErr?.message);
+  check(
+    'invitee sees their pending invitation',
+    !bannerErr && (banner ?? []).length === 1,
+    bannerErr?.message,
+  );
   check(
     'invitation banner can read the household name',
     banner?.[0]?.households?.name === 'Test Household',
@@ -126,9 +138,12 @@ try {
   if (acceptErr) fatal('invitee can accept the invitation', acceptErr.message);
   check('invitee can accept the invitation', true);
 
-  const { error: joinErr } = await member
-    .from('household_members')
-    .insert({ household_id: householdId, user_id: memberId, role: 'member', display_name: 'Test Member' });
+  const { error: joinErr } = await member.from('household_members').insert({
+    household_id: householdId,
+    user_id: memberId,
+    role: 'member',
+    display_name: 'Test Member',
+  });
   if (joinErr) fatal('invitee joins as member', joinErr.message);
   check('invitee joins as member', true);
 
@@ -175,10 +190,16 @@ try {
   check('member adds a household expense', true);
   memberReceiptId = memberReceipt.id;
 
-  const { data: memberSeesOwner } = await member.from('receipts').select('id').eq('id', ownerReceiptId);
+  const { data: memberSeesOwner } = await member
+    .from('receipts')
+    .select('id')
+    .eq('id', ownerReceiptId);
   check("member sees the owner's expense", (memberSeesOwner ?? []).length === 1);
 
-  const { data: ownerSeesAll } = await owner.from('receipts').select('id').eq('household_id', householdId);
+  const { data: ownerSeesAll } = await owner
+    .from('receipts')
+    .select('id')
+    .eq('household_id', householdId);
   check('owner sees both expenses (combined household total)', (ownerSeesAll ?? []).length === 2);
 
   console.log('\n7. Members can only edit their own expenses');
@@ -190,7 +211,9 @@ try {
   check("member cannot edit the owner's expense", (editAttempt ?? []).length === 0);
 
   console.log('\n8. Co-membership drives shared receipt-photo access');
-  const { data: coMember } = await member.rpc('is_household_co_member', { _other_user_id: ownerId });
+  const { data: coMember } = await member.rpc('is_household_co_member', {
+    _other_user_id: ownerId,
+  });
   check('member is recognised as a co-member of the owner', coMember === true);
 
   console.log('\n9. A complete outsider sees nothing');
@@ -201,9 +224,15 @@ try {
     email_confirm: true,
   });
   const outsider = await signInAs(outsiderEmail);
-  const { data: outsiderHouseholds } = await outsider.from('households').select('id').eq('id', householdId);
+  const { data: outsiderHouseholds } = await outsider
+    .from('households')
+    .select('id')
+    .eq('id', householdId);
   check('outsider cannot see the household', (outsiderHouseholds ?? []).length === 0);
-  const { data: outsiderReceipts } = await outsider.from('receipts').select('id').eq('household_id', householdId);
+  const { data: outsiderReceipts } = await outsider
+    .from('receipts')
+    .select('id')
+    .eq('household_id', householdId);
   check("outsider cannot see the household's expenses", (outsiderReceipts ?? []).length === 0);
   await admin.auth.admin.deleteUser(outsiderUser.user.id);
 
@@ -214,10 +243,16 @@ try {
     .eq('household_id', householdId)
     .eq('user_id', memberId)
     .single();
-  const { error: removeErr } = await owner.from('household_members').delete().eq('id', memberRow.id);
+  const { error: removeErr } = await owner
+    .from('household_members')
+    .delete()
+    .eq('id', memberRow.id);
   check('owner can remove a member', !removeErr, removeErr?.message);
 
-  const { data: afterRemoval } = await member.from('receipts').select('id').eq('household_id', householdId);
+  const { data: afterRemoval } = await member
+    .from('receipts')
+    .select('id')
+    .eq('household_id', householdId);
   check(
     "removed member keeps only their own expense, loses the owner's",
     (afterRemoval ?? []).length === 1 && afterRemoval[0].id === memberReceiptId,

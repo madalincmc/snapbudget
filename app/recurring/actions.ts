@@ -115,10 +115,7 @@ export async function updateRecurring(id: string, formData: FormData) {
 export async function pauseRecurring(id: string) {
   const { supabase } = await requireUser();
 
-  const { error } = await supabase
-    .from('recurring_expenses')
-    .update({ paused: true })
-    .eq('id', id);
+  const { error } = await supabase.from('recurring_expenses').update({ paused: true }).eq('id', id);
 
   if (error) {
     throw new Error(error.message);

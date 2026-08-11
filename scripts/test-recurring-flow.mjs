@@ -97,11 +97,10 @@ try {
     ['2020-06-01', 'yearly', '2026-08-05', 7],
   ];
   for (const [start, freq, from, expected] of skips) {
-    const { rows } = await pg.query('select public.recurring_skip_to($1::date, $2, $3::date) as n', [
-      start,
-      freq,
-      from,
-    ]);
+    const { rows } = await pg.query(
+      'select public.recurring_skip_to($1::date, $2, $3::date) as n',
+      [start, freq, from],
+    );
     check(`skip_to(${freq}, ${start}, ${from}) = ${expected}`, rows[0].n === expected, rows[0].n);
   }
   // Cross-check the far-past weekly case rather than trusting the constant.
@@ -109,7 +108,11 @@ try {
     `select public.recurring_occurrence_date('2020-01-15'::date, 'weekly', public.recurring_skip_to('2020-01-15'::date,'weekly','2026-08-05'::date))::text as first_on_or_after,
             public.recurring_occurrence_date('2020-01-15'::date, 'weekly', public.recurring_skip_to('2020-01-15'::date,'weekly','2026-08-05'::date) - 1)::text as previous`,
   );
-  check('weekly skip lands on/after target', wk[0].first_on_or_after >= '2026-08-05', wk[0].first_on_or_after);
+  check(
+    'weekly skip lands on/after target',
+    wk[0].first_on_or_after >= '2026-08-05',
+    wk[0].first_on_or_after,
+  );
   check('weekly skip is the FIRST such occurrence', wk[0].previous < '2026-08-05', wk[0].previous);
 
   console.log('\n3. No retroactive backfill on create');
@@ -167,7 +170,11 @@ try {
     .eq('recurring_expense_id', todayRule.id);
   check('one row, dated today', (generated ?? []).length === 1, JSON.stringify(generated));
   check('source is recurring', generated?.[0]?.source === 'recurring', generated?.[0]?.source);
-  check('amount and merchant copied', Number(generated?.[0]?.amount) === 55, generated?.[0]?.amount);
+  check(
+    'amount and merchant copied',
+    Number(generated?.[0]?.amount) === 55,
+    generated?.[0]?.amount,
+  );
   check('purchase_date is the due date', generated?.[0]?.purchase_date === dayOffset(0));
 
   console.log('\n5. Generation is idempotent');
@@ -192,10 +199,10 @@ try {
     .select('id')
     .single();
   // Rewind the rule as though it had been running for three weeks.
-  await pg.query(
-    `update public.recurring_expenses set start_date = $1::date where id = $2`,
-    [dayOffset(-21), weekly.id],
-  );
+  await pg.query(`update public.recurring_expenses set start_date = $1::date where id = $2`, [
+    dayOffset(-21),
+    weekly.id,
+  ]);
   const { data: gen4 } = await alice.client.rpc('generate_my_recurring');
   // start_date moved to 21 days ago, so the trigger fast-forwards past
   // occurrences: only today's is due.
@@ -204,10 +211,10 @@ try {
   console.log('\n7. Pause and resume');
   await alice.client.from('recurring_expenses').update({ paused: true }).eq('id', todayRule.id);
   // Pretend a month went by while paused.
-  await pg.query(
-    `update public.recurring_expenses set start_date = $1::date where id = $2`,
-    [dayOffset(-35), todayRule.id],
-  );
+  await pg.query(`update public.recurring_expenses set start_date = $1::date where id = $2`, [
+    dayOffset(-35),
+    todayRule.id,
+  ]);
   const { data: gen5 } = await alice.client.rpc('generate_my_recurring');
   check('paused rule generates nothing', gen5 === 0, String(gen5));
 

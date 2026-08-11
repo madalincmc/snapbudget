@@ -1,0 +1,12 @@
+# Line endings are LF in the repository. Without this, a Windows checkout with
+# core.autocrlf=true converts them to CRLF in the working tree, and Prettier —
+# which defaults to endOfLine "lf" — then reports almost every file as badly
+# formatted. `npm run format:check` failed on 35 untouched files for that reason
+# alone, which made the formatter's verdict impossible to trust locally.
+* text=auto eol=lf
+
+# Binary, so Git never tries to normalise or diff them as text.
+*.jpg binary
+*.png binary
+*.svg text eol=lf
+*.ico binary
