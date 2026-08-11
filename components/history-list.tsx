@@ -7,6 +7,7 @@ import { CATEGORIES } from '@/lib/categories';
 import { SourceBadge, StatusBadge, ReceiptThumbnail } from '@/components/receipt-badges';
 import { MemberChip } from '@/components/member-chip';
 import { formatListDate } from '@/lib/dashboard/format';
+import { cn } from '@/lib/utils';
 import type { HouseholdMemberInfo } from '@/lib/household/membership';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -313,7 +314,26 @@ export function HistoryList({
 
       {error && <p className="text-destructive text-sm">{error}</p>}
 
-      {!loading && receipts.length === 0 ? (
+      {/* First load only. A refetch holds the previous rows at reduced opacity
+          instead (see the list below): swapping settled rows for skeletons on
+          every keystroke would make the page flash and jump. */}
+      {loading && receipts.length === 0 && !error ? (
+        <ul className="divide-border flex flex-col divide-y" aria-hidden>
+          {Array.from({ length: 6 }, (_, i) => (
+            <li key={i} className="flex items-center gap-3 py-3">
+              <div className="sb-skeleton h-11 w-11 flex-none rounded-xl" />
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <div
+                  className="sb-skeleton h-3.5 rounded-full"
+                  style={{ width: `${45 + ((i * 13) % 35)}%` }}
+                />
+                <div className="sb-skeleton h-2.5 w-24 rounded-full" />
+              </div>
+              <div className="sb-skeleton h-3.5 w-14 flex-none rounded-full" />
+            </li>
+          ))}
+        </ul>
+      ) : !loading && receipts.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-16 text-center">
           {/* "Add your first receipt" is wrong when the user has plenty and the
               filters simply excluded them — offer to clear them instead. */}
@@ -336,9 +356,17 @@ export function HistoryList({
           )}
         </div>
       ) : (
-        <ul className="divide-border flex flex-col divide-y">
+        <ul
+          className={cn(
+            'divide-border flex flex-col divide-y transition-opacity duration-200',
+            loading && 'opacity-50',
+          )}
+        >
           {receipts.map((r) => (
-            <li key={r.id} className="flex items-center gap-3 py-3">
+            <li
+              key={r.id}
+              className="hover:bg-muted/40 flex items-center gap-3 rounded-lg py-3 transition-colors"
+            >
               <ReceiptThumbnail
                 source={r.source}
                 category={r.category}

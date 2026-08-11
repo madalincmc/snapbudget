@@ -2,6 +2,7 @@ import type * as React from 'react';
 import { Crown, Receipt } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { CATEGORY_BAR_CLASS } from '@/lib/categories';
+import { cn } from '@/lib/utils';
 import type { BiggestExpense, CategoryTotal } from '@/lib/dashboard/aggregate';
 
 function InsightCard({
@@ -10,15 +11,21 @@ function InsightCard({
   title,
   amount,
   accent,
+  delay,
 }: {
   icon: React.ReactNode;
   label: string;
   title: string | null;
   amount: number | null;
   accent?: React.ReactNode;
+  delay: number;
 }) {
   return (
-    <Card size="sm">
+    <Card
+      size="sm"
+      style={{ '--sb-delay': `${delay}ms` } as React.CSSProperties}
+      className="sb-rise hover:border-border transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-0.5 hover:shadow-[0_2px_4px_-2px_oklch(0.2_0.01_75_/_0.08),0_10px_24px_-10px_oklch(0.2_0.01_75_/_0.14)]"
+    >
       <CardContent className="flex flex-col gap-1.5">
         <div className="text-muted-foreground/80 flex items-center gap-1.5 text-[11px] font-medium tracking-wide uppercase">
           {icon}
@@ -62,10 +69,14 @@ export function TrendInsightCards({
         label="Top categorie"
         title={topCategory?.category ?? null}
         amount={topCategory?.total ?? null}
+        delay={0}
         accent={
           topCategory ? (
             <span
-              className={`h-2.5 w-2.5 flex-none rounded-full ${CATEGORY_BAR_CLASS[topCategory.category]}`}
+              className={cn(
+                'h-2.5 w-2.5 flex-none rounded-full',
+                CATEGORY_BAR_CLASS[topCategory.category],
+              )}
             />
           ) : null
         }
@@ -75,6 +86,7 @@ export function TrendInsightCards({
         label="Cheltuiala maximă"
         title={biggestExpense?.merchant ?? null}
         amount={biggestExpense?.amount ?? null}
+        delay={70}
       />
     </div>
   );

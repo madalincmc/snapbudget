@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import { Crown, Mail, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { delay } from '@/lib/utils';
+import { PageHeader } from '@/components/page-header';
 import { BottomNav } from '@/components/bottom-nav';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -35,7 +37,7 @@ function MemberAvatar({ name, avatarUrl }: { name: string | null; avatarUrl: str
   }
   const initial = (name ?? '?').trim().charAt(0).toUpperCase() || '?';
   return (
-    <div className="bg-muted text-muted-foreground flex h-10 w-10 flex-none items-center justify-center rounded-full text-sm font-medium">
+    <div className="bg-accent text-accent-foreground flex h-10 w-10 flex-none items-center justify-center rounded-full text-sm font-semibold">
       {initial}
     </div>
   );
@@ -57,8 +59,13 @@ export default async function HouseholdPage() {
     .eq('user_id', user.id)
     .maybeSingle();
 
+  // Reached from the bottom nav, so there is nowhere specific to go "back" to.
   const header = (
-    <h1 className="text-foreground px-1 text-lg font-semibold tracking-tight">Gospodărie</h1>
+    <PageHeader
+      title="Gospodărie"
+      description="Cheltuiți din conturi separate, vedeți aceleași totaluri"
+      backHref={null}
+    />
   );
 
   if (!membership) {
@@ -66,7 +73,7 @@ export default async function HouseholdPage() {
       <div className="pb-nav flex flex-1 justify-center px-4 pt-5">
         <div className="flex w-full max-w-lg flex-col gap-5">
           {header}
-          <Card>
+          <Card className="sb-rise" style={delay(60)}>
             <CardHeader>
               <p className="text-foreground text-base font-medium">Creează o gospodărie</p>
               <p className="text-muted-foreground text-sm">
@@ -126,7 +133,7 @@ export default async function HouseholdPage() {
       <div className="flex w-full max-w-lg flex-col gap-5">
         {header}
 
-        <Card>
+        <Card className="sb-rise" style={delay(60)}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <p className="text-foreground text-base font-medium">{household?.name}</p>
@@ -141,8 +148,12 @@ export default async function HouseholdPage() {
           <CardContent className="flex flex-col gap-3">
             <p className="text-muted-foreground text-sm font-medium">Membri</p>
             <ul className="flex flex-col gap-3">
-              {(members ?? []).map((m) => (
-                <li key={m.id} className="flex items-center gap-3">
+              {(members ?? []).map((m, index) => (
+                <li
+                  key={m.id}
+                  style={delay(120 + index * 50)}
+                  className="sb-rise flex items-center gap-3"
+                >
                   <MemberAvatar name={m.display_name} avatarUrl={m.avatar_url} />
                   <div className="flex min-w-0 flex-1 flex-col">
                     <span className="text-foreground truncate text-sm font-medium">
@@ -220,7 +231,7 @@ export default async function HouseholdPage() {
         </Card>
 
         {isOwner && (
-          <Card>
+          <Card className="sb-rise" style={delay(160)}>
             <CardHeader>
               <p className="text-foreground text-base font-medium">Invită un membru</p>
               <p className="text-muted-foreground text-sm">

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getHouseholdMembership, type HouseholdMemberInfo } from '@/lib/household/membership';
 import { HistoryList } from '@/components/history-list';
+import { PageHeader } from '@/components/page-header';
 import { BottomNav } from '@/components/bottom-nav';
 
 export default async function HistoryPage({
@@ -40,7 +41,12 @@ export default async function HistoryPage({
   return (
     <div className="pb-nav flex flex-1 justify-center px-4 pt-5">
       <div className="flex w-full max-w-2xl flex-col gap-5">
-        <h1 className="text-foreground px-1 text-lg font-semibold tracking-tight">Istoric</h1>
+        {/* Reached from the bottom nav, so there is no single place to go back to. */}
+        <PageHeader
+          title="Istoric"
+          description="Caută, filtrează și sortează toate cheltuielile"
+          backHref={null}
+        />
         <HistoryList
           members={members}
           meUserId={user.id}

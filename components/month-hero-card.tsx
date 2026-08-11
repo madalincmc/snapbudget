@@ -1,15 +1,17 @@
+import type * as React from 'react';
 import Link from 'next/link';
 import { ArrowRight, Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { monthKeyLabel } from '@/lib/dashboard/format';
 import { shiftMonthKey, type MonthComparison, type MonthKey } from '@/lib/dashboard/aggregate';
+import { AnimatedNumber } from '@/components/animated-number';
 import { BudgetBar, BUDGET_TEXT_CLASS } from '@/components/budget-bar';
 import type { BudgetProgress } from '@/lib/budgets';
 
 /** Thousands separated by a thin space — "2 767.77" scans far faster than "2767.77". */
 function money(value: number, decimals = 2): string {
   const [whole, fraction] = value.toFixed(decimals).split('.');
-  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   return fraction ? `${grouped}.${fraction}` : grouped;
 }
 
@@ -36,9 +38,23 @@ export function MonthHeroCard({
   const { currentTotal, previousTotal, percentChange, hasPreviousData, direction } = comparison;
   const previousLabel = monthKeyLabel(shiftMonthKey(month, -1));
 
+  const projectedPercent =
+    budget && budget.projected !== null && budget.budget.amount > 0
+      ? (budget.projected / budget.budget.amount) * 100
+      : null;
+
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
+    <div className="relative flex flex-col gap-5">
+      {/* A wash of the accent behind the figure, fading out well before the
+          budget line. It gives the hero card a surface of its own without a
+          second border, and it is the one place a large area is allowed to
+          carry the palette. */}
+      <div
+        aria-hidden
+        className="from-chart-accent/10 pointer-events-none absolute -inset-x-5 -top-5 h-40 bg-linear-to-b to-transparent"
+      />
+
+      <div className="relative flex flex-col gap-2">
         <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
           Cheltuit în {monthKeyLabel(month)}
         </p>
@@ -46,7 +62,7 @@ export function MonthHeroCard({
         {/* Proportional figures: tabular-nums pads every digit to the width of
             a zero, which reads visibly loose at display size. */}
         <p className="text-foreground text-[2.75rem] leading-none font-semibold tracking-tight">
-          {money(currentTotal)}
+          <AnimatedNumber value={currentTotal} />
           <span className="text-muted-foreground ml-1.5 text-2xl font-medium">lei</span>
         </p>
 
@@ -54,11 +70,15 @@ export function MonthHeroCard({
           {hasPreviousData ? (
             <span
               className={cn(
-                'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums',
-                direction === 'up' && 'bg-red-500/10 text-red-600 dark:text-red-400',
-                direction === 'down' && 'bg-primary/10 text-primary',
+                'sb-pop inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums',
+                // Up is bad here, so the direction wears the status tokens
+                // rather than the palette accent — spending more is not a
+                // brand moment.
+                direction === 'up' && 'bg-danger/12 text-danger-ink',
+                direction === 'down' && 'bg-ok/12 text-ok-ink',
                 direction === 'flat' && 'bg-muted text-muted-foreground',
               )}
+              style={{ '--sb-delay': '160ms' } as React.CSSProperties}
             >
               {direction === 'up' && <TrendingUp className="h-3.5 w-3.5" />}
               {direction === 'down' && <TrendingDown className="h-3.5 w-3.5" />}
@@ -88,7 +108,7 @@ export function MonthHeroCard({
       </div>
 
       {budget ? (
-        <div className="border-border/70 flex flex-col gap-2 border-t pt-4">
+        <div className="border-border/70 relative flex flex-col gap-2 border-t pt-4">
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-muted-foreground text-xs">
               Buget <span className="tabular-nums">{money(budget.budget.amount, 0)}</span> lei
@@ -100,7 +120,11 @@ export function MonthHeroCard({
             </span>
           </div>
 
-          <BudgetBar percentUsed={budget.percentUsed} status={budget.status} />
+          <BudgetBar
+            percentUsed={budget.percentUsed}
+            status={budget.status}
+            projectedPercent={projectedPercent}
+          />
 
           <p className="text-muted-foreground text-xs tabular-nums">
             {budget.remaining >= 0
@@ -120,10 +144,10 @@ export function MonthHeroCard({
         isCurrentMonth && (
           <Link
             href="/budgets"
-            className="text-muted-foreground hover:text-primary border-border/70 group/set inline-flex items-center gap-1.5 border-t pt-4 text-xs font-medium transition-colors"
+            className="text-muted-foreground hover:text-primary border-border/70 group/set relative inline-flex items-center gap-1.5 border-t pt-4 text-xs font-medium transition-colors"
           >
             Pune un buget lunar și vezi cât mai ai
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/set:translate-x-0.5" />
+            <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover/set:translate-x-0.5" />
           </Link>
         )
       )}

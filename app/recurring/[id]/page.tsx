@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { delay } from '@/lib/utils';
+import { PageHeader } from '@/components/page-header';
 import { RecurringForm } from '@/components/recurring-form';
 import { formatListDate } from '@/lib/dashboard/format';
 import type { RecurringExpense } from '@/lib/recurring';
@@ -49,28 +49,23 @@ export default async function EditRecurringPage({ params }: { params: Promise<{ 
   return (
     <div className="flex flex-1 justify-center px-4 py-6">
       <div className="flex w-full max-w-lg flex-col gap-5">
-        <Button
-          variant="link"
-          className="self-start px-0"
-          nativeButton={false}
-          render={<Link href="/recurring" />}
-        >
-          <ArrowLeft />
-          Înapoi
-        </Button>
-
-        <div className="flex flex-col gap-1">
-          <h1 className="text-foreground text-xl font-semibold">Editează recurenta</h1>
-          <p className="text-muted-foreground text-sm">
-            {rule.paused
+        <PageHeader
+          title="Editează recurenta"
+          description={`${
+            rule.paused
               ? 'Regula e pe pauză.'
-              : `Următoarea scadență: ${formatListDate(rule.next_due_date)}.`}{' '}
-            Modificările se aplică doar ocurențelor viitoare — cheltuielile deja generate rămân
-            neschimbate.
-          </p>
-        </div>
+              : `Următoarea scadență: ${formatListDate(rule.next_due_date)}.`
+          } Modificările se aplică doar ocurențelor viitoare.`}
+          backHref="/recurring"
+        />
 
-        <RecurringForm action={updateWithId} existing={rule} submitLabel="Salvează modificările" />
+        <div className="sb-rise" style={delay(60)}>
+          <RecurringForm
+            action={updateWithId}
+            existing={rule}
+            submitLabel="Salvează modificările"
+          />
+        </div>
 
         <AlertDialog>
           <AlertDialogTrigger

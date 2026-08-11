@@ -18,7 +18,7 @@ import {
   type BudgetRow,
 } from '@/lib/budgets';
 import { MonthPicker } from '@/components/month-picker';
-import { ThemeToggle } from '@/components/theme-toggle';
+import { AppearanceMenu } from '@/components/appearance-menu';
 import { CategoryBreakdown } from '@/components/category-breakdown';
 import { MonthHeroCard } from '@/components/month-hero-card';
 import { TrendInsightCards } from '@/components/trend-insight-cards';
@@ -31,6 +31,7 @@ import { QuickLinksCard, type RecurringSummary } from '@/components/quick-links-
 import { BottomNav } from '@/components/bottom-nav';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { delay } from '@/lib/utils';
 import { signOut } from './actions';
 
 export default async function DashboardPage({
@@ -203,7 +204,7 @@ export default async function DashboardPage({
         {/* Identity and period controls share one row. The greeting had a full
             row of its own above a second row for the filter, which spent the
             top of a phone screen on chrome before any number appeared. */}
-        <header className="flex items-center justify-between gap-3">
+        <header className="sb-fade flex items-center justify-between gap-3">
           <div className="flex min-w-0 flex-col">
             <span className="text-muted-foreground text-xs">Salut,</span>
             <h1 className="text-foreground truncate text-base leading-tight font-semibold">
@@ -215,7 +216,7 @@ export default async function DashboardPage({
             {hasAnyExpense && members.length > 1 && (
               <HouseholdFilter members={members} meUserId={user.id} />
             )}
-            <ThemeToggle />
+            <AppearanceMenu />
             <form action={signOut}>
               <Button
                 type="submit"
@@ -235,13 +236,17 @@ export default async function DashboardPage({
         {!hasAnyExpense ? (
           <DashboardEmptyState />
         ) : (
+          // Sections arrive in the order they are read, ~70ms apart. The stagger
+          // is small enough to feel like the page settling rather than a
+          // sequence the reader has to wait out, and it puts the month total on
+          // screen first — which is what the app was opened for.
           <>
-            <div className="-mt-1 flex justify-center">
+            <div className="sb-fade -mt-1 flex justify-center" style={delay(40)}>
               <MonthPicker month={month} currentMonth={currentMonth} />
             </div>
 
             {/* The number, and whether it is a problem — one card. */}
-            <Card className="[--card-spacing:--spacing(5)]">
+            <Card className="sb-rise [--card-spacing:--spacing(5)]" style={delay(80)}>
               <CardContent>
                 <MonthHeroCard
                   comparison={comparison}
@@ -255,7 +260,7 @@ export default async function DashboardPage({
 
             <TrendInsightCards topCategory={topCategory} biggestExpense={biggestExpense} />
 
-            <Card>
+            <Card className="sb-rise" style={delay(220)}>
               <CardContent>
                 <CategoryBreakdown
                   categoryTotals={categoryTotals}
@@ -264,7 +269,7 @@ export default async function DashboardPage({
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="sb-rise" style={delay(290)}>
               <CardContent>
                 <SpendingTrendChart
                   data={dailyTrend}
@@ -276,7 +281,7 @@ export default async function DashboardPage({
 
             {/* Recent activity describes now, not the month being browsed. */}
             {isCurrentMonth && (
-              <Card>
+              <Card className="sb-rise" style={delay(360)}>
                 <CardContent>
                   <ReceiptsList receipts={latest} meUserId={user.id} creators={creators} />
                 </CardContent>

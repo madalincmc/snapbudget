@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft, ChartColumnIncreasing } from 'lucide-react';
+import { ChartColumnIncreasing } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { monthlySpending } from '@/lib/dashboard/query';
 import { monthKeyOf, monthKeyToDate, recentMonthKeys } from '@/lib/dashboard/aggregate';
@@ -9,10 +8,12 @@ import { buildAnalytics, type MonthlySpendRow } from '@/lib/analytics';
 import { getHouseholdMembership, type HouseholdMemberInfo } from '@/lib/household/membership';
 import { MonthlyTrendChart } from '@/components/monthly-trend-chart';
 import { CategoryTrendList } from '@/components/category-trend-list';
+import { AnimatedNumber } from '@/components/animated-number';
 import { HouseholdFilter } from '@/components/household-filter';
+import { PageHeader } from '@/components/page-header';
 import { BottomNav } from '@/components/bottom-nav';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { delay } from '@/lib/utils';
 
 const WINDOW_MONTHS = 12;
 
@@ -66,25 +67,15 @@ export default async function AnalyticsPage({
   return (
     <div className="pb-nav flex flex-1 justify-center px-4 pt-5">
       <div className="flex w-full max-w-lg flex-col gap-5">
-        <div className="flex items-center justify-between gap-2 px-1">
-          <h1 className="text-foreground text-lg font-semibold tracking-tight">Analiză</h1>
-          <Button
-            variant="link"
-            className="text-muted-foreground px-0"
-            nativeButton={false}
-            render={<Link href="/dashboard" />}
-          >
-            <ArrowLeft />
-            Dashboard
-          </Button>
-        </div>
-
-        {members.length > 1 && (
-          <div className="flex items-center justify-end gap-2 px-1">
-            <span className="text-muted-foreground text-xs">Cheltuieli:</span>
-            <HouseholdFilter members={members} meUserId={user.id} />
-          </div>
-        )}
+        <PageHeader
+          title="Analiză"
+          description="Ultimele 12 luni, față de media ta"
+          actions={
+            members.length > 1 ? (
+              <HouseholdFilter members={members} meUserId={user.id} />
+            ) : undefined
+          }
+        />
 
         {error ? (
           <Card>
@@ -97,23 +88,27 @@ export default async function AnalyticsPage({
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3">
-              <Card>
+              <Card className="sb-rise" style={delay(60)}>
                 <CardContent className="flex flex-col gap-0.5">
                   <span className="text-muted-foreground text-xs">Total {analytics.year}</span>
-                  <span className="text-foreground text-xl font-semibold tabular-nums">
-                    {analytics.yearTotal.toFixed(0)}
+                  <span className="text-foreground text-xl font-semibold">
+                    <AnimatedNumber value={analytics.yearTotal} decimals={0} />
                     <span className="text-muted-foreground text-sm font-normal"> lei</span>
                   </span>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="sb-rise" style={delay(120)}>
                 <CardContent className="flex flex-col gap-0.5">
                   <span className="text-muted-foreground text-xs">Medie pe lună</span>
-                  <span className="text-foreground text-xl font-semibold tabular-nums">
-                    {analytics.monthlyAverage === null ? '—' : analytics.monthlyAverage.toFixed(0)}
-                    {analytics.monthlyAverage !== null && (
-                      <span className="text-muted-foreground text-sm font-normal"> lei</span>
+                  <span className="text-foreground text-xl font-semibold">
+                    {analytics.monthlyAverage === null ? (
+                      '—'
+                    ) : (
+                      <>
+                        <AnimatedNumber value={analytics.monthlyAverage} decimals={0} />
+                        <span className="text-muted-foreground text-sm font-normal"> lei</span>
+                      </>
                     )}
                   </span>
                   <span className="text-muted-foreground/70 text-[11px]">
@@ -127,7 +122,7 @@ export default async function AnalyticsPage({
               </Card>
             </div>
 
-            <Card>
+            <Card className="sb-rise" style={delay(180)}>
               <CardContent>
                 <MonthlyTrendChart
                   monthTotals={analytics.monthTotals}
@@ -138,9 +133,9 @@ export default async function AnalyticsPage({
             </Card>
 
             {analytics.busiestMonth && (
-              <Card>
+              <Card className="sb-rise" style={delay(250)}>
                 <CardContent className="flex items-center gap-3">
-                  <div className="bg-muted text-muted-foreground flex h-10 w-10 flex-none items-center justify-center rounded-lg">
+                  <div className="bg-accent text-accent-foreground flex h-10 w-10 flex-none items-center justify-center rounded-xl">
                     <ChartColumnIncreasing className="h-5 w-5" />
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col">
@@ -156,7 +151,7 @@ export default async function AnalyticsPage({
               </Card>
             )}
 
-            <Card>
+            <Card className="sb-rise" style={delay(320)}>
               <CardContent>
                 <CategoryTrendList trends={analytics.categoryTrends} />
               </CardContent>

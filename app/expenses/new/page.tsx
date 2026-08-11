@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { delay } from '@/lib/utils';
+import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,24 +24,16 @@ export default async function NewExpensePage() {
   return (
     <div className="flex flex-1 justify-center px-6 py-10">
       <div className="flex w-full max-w-lg flex-col gap-6">
-        <Button
-          variant="link"
-          className="self-start px-0"
-          nativeButton={false}
-          render={<Link href="/dashboard" />}
+        <PageHeader
+          title="Adaugă cheltuială manuală"
+          description="Pentru cheltuieli fără bon: cash, parcare, transport"
+        />
+
+        <form
+          action={createManualExpense}
+          className="sb-rise flex flex-col gap-4"
+          style={delay(60)}
         >
-          <ArrowLeft />
-          Înapoi la dashboard
-        </Button>
-
-        <div className="flex flex-col gap-1">
-          <h1 className="text-foreground text-xl font-semibold">Adaugă cheltuială manuală</h1>
-          <p className="text-muted-foreground text-sm">
-            Pentru cheltuieli fără bon: cash, parcare, transport, etc.
-          </p>
-        </div>
-
-        <form action={createManualExpense} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="amount">Sumă (lei) — obligatoriu</Label>
             <Input
