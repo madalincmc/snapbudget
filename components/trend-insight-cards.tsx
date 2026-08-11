@@ -19,8 +19,8 @@ function InsightCard({
 }) {
   return (
     <Card size="sm">
-      <CardContent className="flex flex-col gap-1">
-        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+      <CardContent className="flex flex-col gap-1.5">
+        <div className="text-muted-foreground/80 flex items-center gap-1.5 text-[11px] font-medium tracking-wide uppercase">
           {icon}
           <span className="truncate">{label}</span>
         </div>
@@ -28,12 +28,13 @@ function InsightCard({
           <p className="text-muted-foreground/70 pt-1 text-sm">—</p>
         ) : (
           <>
-            <p className="text-foreground flex items-center gap-1.5 truncate text-sm font-medium">
+            <p className="text-muted-foreground flex items-center gap-1.5 truncate text-xs">
               {accent}
               <span className="truncate">{title}</span>
             </p>
-            <p className="text-foreground text-lg leading-tight font-semibold">
-              {amount.toFixed(2)} <span className="text-muted-foreground text-sm">lei</span>
+            <p className="text-foreground text-lg leading-tight font-semibold tracking-tight">
+              {amount.toFixed(2)}
+              <span className="text-muted-foreground/70 text-xs font-normal"> lei</span>
             </p>
           </>
         )}

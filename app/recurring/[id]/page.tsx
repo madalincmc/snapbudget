@@ -20,11 +20,7 @@ import {
 import { Trash2 } from 'lucide-react';
 import { updateRecurring, deleteRecurring } from '../actions';
 
-export default async function EditRecurringPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function EditRecurringPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
 
@@ -37,7 +33,9 @@ export default async function EditRecurringPage({
 
   const { data } = await supabase
     .from('recurring_expenses')
-    .select('id, title, amount, category, subcategory, frequency, start_date, next_due_date, paused, notes')
+    .select(
+      'id, title, amount, category, subcategory, frequency, start_date, next_due_date, paused, notes',
+    )
     .eq('id', id)
     .maybeSingle();
 
@@ -49,7 +47,7 @@ export default async function EditRecurringPage({
   const updateWithId = updateRecurring.bind(null, id);
 
   return (
-    <div className="bg-muted/40 flex flex-1 justify-center px-4 py-6">
+    <div className="flex flex-1 justify-center px-4 py-6">
       <div className="flex w-full max-w-lg flex-col gap-5">
         <Button
           variant="link"

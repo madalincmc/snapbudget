@@ -16,7 +16,7 @@ export default async function NewReceiptPage() {
   }
 
   return (
-    <div className="bg-muted/40 flex flex-1 flex-col items-center justify-center gap-8 px-6">
+    <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6">
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-foreground text-2xl font-semibold tracking-tight">Adaugă bon</h1>
         <p className="text-muted-foreground">Fotografiază bonul sau alege o poză din galerie.</p>

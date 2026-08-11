@@ -9,7 +9,7 @@ export default async function LoginPage({
   const { next } = await searchParams;
 
   return (
-    <div className="bg-muted/40 flex flex-1 items-center justify-center px-6">
+    <div className="flex flex-1 items-center justify-center px-6">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
           <CardTitle className="text-2xl">SnapBudget</CardTitle>

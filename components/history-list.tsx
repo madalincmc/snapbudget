@@ -147,7 +147,9 @@ export function HistoryList({
     // replaceState rather than router.replace: this only needs to keep the
     // address bar in step, and a Next navigation here would retrigger the
     // fetch effect below on every keystroke.
-    const url = filterQuery ? `${window.location.pathname}?${filterQuery}` : window.location.pathname;
+    const url = filterQuery
+      ? `${window.location.pathname}?${filterQuery}`
+      : window.location.pathname;
     window.history.replaceState(null, '', url);
   }, [filterQuery]);
 
@@ -157,7 +159,9 @@ export function HistoryList({
     all: 'Toți',
     me: 'Eu',
     ...Object.fromEntries(
-      members.filter((m) => m.userId !== meUserId).map((m) => [m.userId, m.displayName ?? 'Membru']),
+      members
+        .filter((m) => m.userId !== meUserId)
+        .map((m) => [m.userId, m.displayName ?? 'Membru']),
     ),
   };
 
@@ -219,8 +223,10 @@ export function HistoryList({
       </div>
 
       {/* One scrollable row rather than a stack of full-width selects: four
-          stacked dropdowns pushed every result below the fold on a phone. */}
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          stacked dropdowns pushed every result below the fold on a phone.
+          The mask fades the trailing edge so a half-visible control reads as
+          "more to the right" rather than as a clipped layout. */}
+      <div className="-mx-1 flex [scrollbar-width:none] gap-2 overflow-x-auto [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] px-1 pb-1 [&::-webkit-scrollbar]:hidden">
         <Select
           items={CATEGORY_ITEMS}
           value={category}
@@ -333,7 +339,11 @@ export function HistoryList({
         <ul className="divide-border flex flex-col divide-y">
           {receipts.map((r) => (
             <li key={r.id} className="flex items-center gap-3 py-3">
-              <ReceiptThumbnail source={r.source} thumbnailUrl={r.thumbnailUrl} />
+              <ReceiptThumbnail
+                source={r.source}
+                category={r.category}
+                thumbnailUrl={r.thumbnailUrl}
+              />
 
               <Link
                 href={`/receipts/${r.id}?from=${encodeURIComponent(returnTo)}`}
@@ -352,19 +362,27 @@ export function HistoryList({
                 </span>
               </Link>
 
-              <div className="flex flex-none items-center gap-3">
+              <div className="flex flex-none items-center gap-2">
                 {r.amount !== null ? (
-                  <span className="text-foreground text-sm font-medium tabular-nums">
-                    {r.amount.toFixed(2)} lei
+                  <span className="text-foreground text-sm font-semibold tabular-nums">
+                    {r.amount.toFixed(2)}
+                    <span className="text-muted-foreground/70 text-xs font-normal"> lei</span>
                   </span>
                 ) : (
                   <StatusBadge status={r.status} />
                 )}
 
                 <AlertDialog>
+                  {/* Muted until reached for. In destructive red on every row
+                      it was the loudest thing on the screen, which put the
+                      strongest visual pull on the one irreversible action. */}
                   <AlertDialogTrigger
                     render={
-                      <Button variant="ghost" size="icon-sm" className="text-destructive">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 focus-visible:text-destructive"
+                      >
                         <Trash2 />
                         <span className="sr-only">Șterge bonul</span>
                       </Button>

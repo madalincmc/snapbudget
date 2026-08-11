@@ -18,7 +18,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { createHousehold, inviteMember, cancelInvitation, removeMember, leaveHousehold } from './actions';
+import {
+  createHousehold,
+  inviteMember,
+  cancelInvitation,
+  removeMember,
+  leaveHousehold,
+} from './actions';
 
 function MemberAvatar({ name, avatarUrl }: { name: string | null; avatarUrl: string | null }) {
   if (avatarUrl) {
@@ -51,12 +57,14 @@ export default async function HouseholdPage() {
     .eq('user_id', user.id)
     .maybeSingle();
 
-  const header = <h1 className="text-foreground px-1 text-lg font-semibold">Gospodărie</h1>;
+  const header = (
+    <h1 className="text-foreground px-1 text-lg font-semibold tracking-tight">Gospodărie</h1>
+  );
 
   if (!membership) {
     return (
-      <div className="bg-muted/40 pb-nav flex flex-1 justify-center px-4 pt-6">
-        <div className="flex w-full max-w-lg flex-col gap-4">
+      <div className="pb-nav flex flex-1 justify-center px-4 pt-5">
+        <div className="flex w-full max-w-lg flex-col gap-5">
           {header}
           <Card>
             <CardHeader>
@@ -70,7 +78,13 @@ export default async function HouseholdPage() {
               <form action={createHousehold} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="name">Nume gospodărie</Label>
-                  <Input id="name" name="name" placeholder="ex: Familia Popescu" required autoFocus />
+                  <Input
+                    id="name"
+                    name="name"
+                    placeholder="ex: Familia Popescu"
+                    required
+                    autoFocus
+                  />
                 </div>
                 <Button type="submit" size="lg" className="mt-1 h-11 rounded-full">
                   Creează gospodăria
@@ -108,8 +122,8 @@ export default async function HouseholdPage() {
     : { data: [] };
 
   return (
-    <div className="bg-muted/40 pb-nav flex flex-1 justify-center px-4 pt-6">
-      <div className="flex w-full max-w-lg flex-col gap-4">
+    <div className="pb-nav flex flex-1 justify-center px-4 pt-5">
+      <div className="flex w-full max-w-lg flex-col gap-5">
         {header}
 
         <Card>
@@ -154,8 +168,8 @@ export default async function HouseholdPage() {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Elimini acest membru?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            {m.display_name ?? m.email} nu va mai avea acces la gospodărie. Cheltuielile
-                            deja adăugate rămân neschimbate.
+                            {m.display_name ?? m.email} nu va mai avea acces la gospodărie.
+                            Cheltuielile deja adăugate rămân neschimbate.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -186,8 +200,8 @@ export default async function HouseholdPage() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Părăsești gospodăria?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Nu vei mai vedea cheltuielile celorlalți membri, iar cheltuielile tale viitoare
-                      nu vor mai fi partajate.
+                      Nu vei mai vedea cheltuielile celorlalți membri, iar cheltuielile tale
+                      viitoare nu vor mai fi partajate.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -210,15 +224,21 @@ export default async function HouseholdPage() {
             <CardHeader>
               <p className="text-foreground text-base font-medium">Invită un membru</p>
               <p className="text-muted-foreground text-sm">
-                Persoana invitată va putea accepta după ce se conectează cu contul ei Google, folosind
-                exact această adresă de email.
+                Persoana invitată va putea accepta după ce se conectează cu contul ei Google,
+                folosind exact această adresă de email.
               </p>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <form action={inviteMember} className="flex flex-col gap-3 sm:flex-row sm:items-end">
                 <div className="flex flex-1 flex-col gap-1.5">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" placeholder="nume@exemplu.com" required />
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="nume@exemplu.com"
+                    required
+                  />
                 </div>
                 <Button type="submit" className="h-10 sm:h-9">
                   Trimite invitația
@@ -230,10 +250,17 @@ export default async function HouseholdPage() {
                   {(invitations ?? []).map((inv) => (
                     <li key={inv.id} className="flex items-center gap-3 py-2">
                       <Mail className="text-muted-foreground h-4 w-4 flex-none" />
-                      <span className="text-foreground min-w-0 flex-1 truncate text-sm">{inv.email}</span>
+                      <span className="text-foreground min-w-0 flex-1 truncate text-sm">
+                        {inv.email}
+                      </span>
                       <Badge variant="outline">În așteptare</Badge>
                       <form action={cancelInvitation.bind(null, inv.id)}>
-                        <Button type="submit" variant="ghost" size="icon-sm" className="text-destructive">
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="icon-sm"
+                          className="text-destructive"
+                        >
                           <X />
                           <span className="sr-only">Anulează invitația</span>
                         </Button>

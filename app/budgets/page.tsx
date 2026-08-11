@@ -89,10 +89,10 @@ export default async function BudgetsPage({
     target === 'personal' ? '/budgets?scope=personal' : '/budgets';
 
   return (
-    <div className="bg-muted/40 pb-nav flex flex-1 justify-center px-4 pt-6">
-      <div className="flex w-full max-w-lg flex-col gap-4">
+    <div className="pb-nav flex flex-1 justify-center px-4 pt-5">
+      <div className="flex w-full max-w-lg flex-col gap-5">
         <div className="flex items-center justify-between gap-2 px-1">
-          <h1 className="text-foreground text-lg font-semibold">Bugete</h1>
+          <h1 className="text-foreground text-lg font-semibold tracking-tight">Bugete</h1>
           <Button
             variant="link"
             className="text-muted-foreground px-0"
@@ -138,7 +138,7 @@ export default async function BudgetsPage({
             {overview.overall ? (
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-foreground text-lg font-semibold tabular-nums">
+                  <span className="text-foreground text-lg font-semibold tracking-tight tabular-nums">
                     {overview.overall.spent.toFixed(2)}
                     <span className="text-muted-foreground text-sm font-normal">
                       {' '}
