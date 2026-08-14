@@ -179,12 +179,24 @@ export interface CategorizeResult {
   subcategory: string | null;
 }
 
-export function categorizeMerchant(merchant: string | null): CategorizeResult {
-  if (!merchant) return { category: 'Altele', subcategory: null };
+/**
+ * The rules, reporting a miss as `null` rather than as a default.
+ *
+ * The manual form needs that distinction: "Altele" arrived at by recognising
+ * nothing is a placeholder it must not advertise, while "Altele" is also a
+ * legitimate answer a rule could give. Only a real match is worth showing the
+ * user as a suggestion.
+ */
+export function suggestCategory(merchant: string | null): CategorizeResult | null {
+  if (!merchant) return null;
 
   for (const { category, subcategory, pattern } of RULES) {
     if (pattern.test(merchant)) return { category, subcategory };
   }
 
-  return { category: 'Altele', subcategory: null };
+  return null;
+}
+
+export function categorizeMerchant(merchant: string | null): CategorizeResult {
+  return suggestCategory(merchant) ?? { category: 'Altele', subcategory: null };
 }
