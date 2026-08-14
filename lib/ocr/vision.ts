@@ -32,6 +32,12 @@ export async function detectText(imageBase64: string): Promise<string> {
         {
           image: { content: imageBase64 },
           features: [{ type: 'TEXT_DETECTION' }],
+          // Romanian first, so diacritics and words like "Sumă" and "Plată"
+          // are read as words rather than as lookalike character soup.
+          // DOCUMENT_TEXT_DETECTION was compared against this on the real
+          // receipts in the account and returned identical text on every one,
+          // so the denser model is not worth the swap here.
+          imageContext: { languageHints: ['ro', 'en'] },
         },
       ],
     }),
