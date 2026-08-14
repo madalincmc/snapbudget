@@ -6,10 +6,10 @@
 export const CATEGORIES = [
   'Mâncare & Băutură',
   'Transport',
-  'Casă',
-  'Sănătate',
+  'Locuință & Facturi',
+  'Sănătate & Îngrijire',
   'Cumpărături',
-  'Familie',
+  'Familie & Educație',
   'Divertisment',
   'Financiar',
   'Altele',
@@ -17,16 +17,52 @@ export const CATEGORIES = [
 
 export type Category = (typeof CATEGORIES)[number];
 
+/**
+ * Subcategories name *what was bought*, never how it was paid for. The old
+ * "Abonamente" broke that rule and behaved accordingly: sitting under
+ * Divertisment, it collected the phone plan, the gym and software licences
+ * alongside Netflix, because a monthly charge is the one thing they share.
+ *
+ * "Facturi" in the housing label is load-bearing. A phone plan is not a
+ * property of the dwelling, so under a bare "Casă" it reads as misfiled — it
+ * belongs there as a recurring bill, and the name has to say so.
+ *
+ * Cash withdrawals are deliberately absent: a withdrawal is a transfer, not
+ * spending, and recording it counted the same money twice — once on the way
+ * out of the account and again when the cash was actually spent.
+ */
 export const SUBCATEGORIES: Record<Category, readonly string[]> = {
   'Mâncare & Băutură': ['Alimente', 'Restaurante', 'Cafea & Gustări', 'Livrare mâncare'],
-  Transport: ['Combustibil', 'Transport public', 'Parcare & Taxe drum', 'Întreținere auto'],
-  Casă: ['Utilități', 'Chirie / Rată', 'Mobilă & Electrocasnice', 'Renovări'],
-  Sănătate: ['Farmacie', 'Medical', 'Fitness'],
-  Cumpărături: ['Îmbrăcăminte', 'Electronice', 'Cumpărături generale'],
-  Familie: ['Copii', 'Educație', 'Animale de companie'],
-  Divertisment: ['Abonamente', 'Filme & Jocuri', 'Călătorii & Timp liber'],
-  Financiar: ['Comisioane bancare', 'Asigurări', 'Taxe'],
-  Altele: ['Retragere numerar', 'Cadouri', 'Neclasificat'],
+  Transport: [
+    'Combustibil',
+    'Transport public',
+    'Taxi & Ridesharing',
+    'Parcare & Drum',
+    'Întreținere auto',
+  ],
+  'Locuință & Facturi': [
+    'Chirie / Rată',
+    'Utilități',
+    'Telefon & Internet',
+    'Întreținere & Reparații',
+  ],
+  'Sănătate & Îngrijire': ['Farmacie', 'Medical', 'Sport & Fitness', 'Îngrijire personală'],
+  Cumpărături: ['Îmbrăcăminte & Încălțăminte', 'Electronice', 'Casă & Decor', 'Cadouri'],
+  'Familie & Educație': ['Copii', 'Educație & Cursuri', 'Animale de companie'],
+  Divertisment: [
+    'Streaming & Media',
+    'Filme & Jocuri',
+    'Ieșiri & Evenimente',
+    'Călătorii & Cazare',
+  ],
+  Financiar: [
+    'Comisioane bancare',
+    'Asigurări',
+    'Taxe & Impozite',
+    'Rate & Credite',
+    'Economii & Investiții',
+  ],
+  Altele: ['Donații', 'Neclasificat'],
 };
 
 /**
@@ -48,14 +84,21 @@ export const SUBCATEGORIES: Record<Category, readonly string[]> = {
  * hue — which is also why the set stays inside the eight-slot ceiling.
  */
 
-/** Token stem per category — `--cat-food`, `--cat-food-ink`, `bg-cat-food`, … */
+/**
+ * Token stem per category — `--cat-food`, `--cat-food-ink`, `bg-cat-food`, …
+ *
+ * The stems are deliberately short English words rather than slugs of the
+ * labels, so renaming a category is a one-line change here: "Casă" became
+ * "Locuință & Facturi" without touching a single custom property, and the
+ * validated palette carried over untouched.
+ */
 export const CATEGORY_TOKEN: Record<Category, string> = {
   'Mâncare & Băutură': 'food',
   Transport: 'transport',
-  Casă: 'home',
-  Sănătate: 'health',
+  'Locuință & Facturi': 'home',
+  'Sănătate & Îngrijire': 'health',
   Cumpărături: 'shopping',
-  Familie: 'family',
+  'Familie & Educație': 'family',
   Divertisment: 'fun',
   Financiar: 'finance',
   Altele: 'other',
@@ -69,10 +112,10 @@ export const CATEGORY_TOKEN: Record<Category, string> = {
 export const CATEGORY_VAR: Record<Category, string> = {
   'Mâncare & Băutură': 'var(--cat-food)',
   Transport: 'var(--cat-transport)',
-  Casă: 'var(--cat-home)',
-  Sănătate: 'var(--cat-health)',
+  'Locuință & Facturi': 'var(--cat-home)',
+  'Sănătate & Îngrijire': 'var(--cat-health)',
   Cumpărături: 'var(--cat-shopping)',
-  Familie: 'var(--cat-family)',
+  'Familie & Educație': 'var(--cat-family)',
   Divertisment: 'var(--cat-fun)',
   Financiar: 'var(--cat-finance)',
   Altele: 'var(--cat-other)',
@@ -86,10 +129,10 @@ export const CATEGORY_VAR: Record<Category, string> = {
 export const CATEGORY_BAR_CLASS: Record<Category, string> = {
   'Mâncare & Băutură': 'bg-cat-food',
   Transport: 'bg-cat-transport',
-  Casă: 'bg-cat-home',
-  Sănătate: 'bg-cat-health',
+  'Locuință & Facturi': 'bg-cat-home',
+  'Sănătate & Îngrijire': 'bg-cat-health',
   Cumpărături: 'bg-cat-shopping',
-  Familie: 'bg-cat-family',
+  'Familie & Educație': 'bg-cat-family',
   Divertisment: 'bg-cat-fun',
   Financiar: 'bg-cat-finance',
   Altele: 'bg-cat-other',
@@ -102,10 +145,10 @@ export const CATEGORY_DOT_CLASS = CATEGORY_BAR_CLASS;
 export const CATEGORY_FILL_CLASS: Record<Category, string> = {
   'Mâncare & Băutură': 'fill-cat-food',
   Transport: 'fill-cat-transport',
-  Casă: 'fill-cat-home',
-  Sănătate: 'fill-cat-health',
+  'Locuință & Facturi': 'fill-cat-home',
+  'Sănătate & Îngrijire': 'fill-cat-health',
   Cumpărături: 'fill-cat-shopping',
-  Familie: 'fill-cat-family',
+  'Familie & Educație': 'fill-cat-family',
   Divertisment: 'fill-cat-fun',
   Financiar: 'fill-cat-finance',
   Altele: 'fill-cat-other',
@@ -120,10 +163,10 @@ export const CATEGORY_FILL_CLASS: Record<Category, string> = {
 export const CATEGORY_BADGE_CLASS: Record<Category, string> = {
   'Mâncare & Băutură': 'bg-cat-food/12 text-cat-food-ink',
   Transport: 'bg-cat-transport/12 text-cat-transport-ink',
-  Casă: 'bg-cat-home/12 text-cat-home-ink',
-  Sănătate: 'bg-cat-health/14 text-cat-health-ink',
+  'Locuință & Facturi': 'bg-cat-home/12 text-cat-home-ink',
+  'Sănătate & Îngrijire': 'bg-cat-health/14 text-cat-health-ink',
   Cumpărături: 'bg-cat-shopping/14 text-cat-shopping-ink',
-  Familie: 'bg-cat-family/12 text-cat-family-ink',
+  'Familie & Educație': 'bg-cat-family/12 text-cat-family-ink',
   Divertisment: 'bg-cat-fun/12 text-cat-fun-ink',
   Financiar: 'bg-cat-finance/12 text-cat-finance-ink',
   Altele: 'bg-cat-other/15 text-cat-other-ink',

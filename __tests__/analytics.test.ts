@@ -17,7 +17,7 @@ describe('buildAnalytics', () => {
 
   it('aligns totals to the month slots and zero-fills the gaps', () => {
     const data = buildAnalytics(
-      [row('2026-06', 'Transport', 100), row('2026-08', 'Casă', 50)],
+      [row('2026-06', 'Transport', 100), row('2026-08', 'Locuință & Facturi', 50)],
       now,
     );
 
@@ -29,7 +29,10 @@ describe('buildAnalytics', () => {
   });
 
   it('sums several categories into one month total', () => {
-    const data = buildAnalytics([row('2026-07', 'Transport', 30), row('2026-07', 'Casă', 70)], now);
+    const data = buildAnalytics(
+      [row('2026-07', 'Transport', 30), row('2026-07', 'Locuință & Facturi', 70)],
+      now,
+    );
 
     expect(data.monthTotals.find((m) => m.month === '2026-07')?.total).toBe(100);
   });
@@ -116,12 +119,12 @@ describe('buildAnalytics', () => {
       [
         row('2026-06', 'Transport', 100),
         row('2026-07', 'Transport', 100),
-        row('2026-06', 'Casă', 500),
+        row('2026-06', 'Locuință & Facturi', 500),
       ],
       now,
     );
 
-    expect(data.categoryTrends.map((t) => t.category)).toEqual(['Casă', 'Transport']);
+    expect(data.categoryTrends.map((t) => t.category)).toEqual(['Locuință & Facturi', 'Transport']);
 
     const transport = data.categoryTrends.find((t) => t.category === 'Transport')!;
     expect(transport.monthly).toHaveLength(12);
@@ -156,7 +159,7 @@ describe('buildAnalytics', () => {
     expect(single.categoryTrends[0].changePercent).toBeNull();
 
     const fromNothing = buildAnalytics(
-      [row('2026-06', 'Casă', 10), row('2026-07', 'Transport', 200)],
+      [row('2026-06', 'Locuință & Facturi', 10), row('2026-07', 'Transport', 200)],
       now,
     );
     // Transport starts in July: its June baseline is 0, and 0 → 200 is not a
