@@ -17,7 +17,7 @@ import { CATEGORIES, SUBCATEGORIES, type Category } from '@/lib/categories';
 const RECENTS_KEY = 'snapbudget:recent-categories';
 const MAX_RECENTS = 5;
 
-interface CategoryValue {
+export interface CategoryValue {
   category: Category;
   subcategory: string | null;
 }
@@ -51,6 +51,11 @@ interface CategoryPickerProps {
   defaultSubcategory?: string | null;
   categoryName?: string;
   subcategoryName?: string;
+  /** Controlled mode. Pass both to drive the value from outside — the manual
+   *  expense form does, so a merchant typed above can propose a category here.
+   *  Left out, the picker keeps its own state as before. */
+  value?: CategoryValue;
+  onValueChange?: (value: CategoryValue) => void;
 }
 
 export function CategoryPicker({
@@ -58,13 +63,17 @@ export function CategoryPicker({
   defaultSubcategory = null,
   categoryName = 'category',
   subcategoryName = 'subcategory',
+  value: controlledValue,
+  onValueChange,
 }: CategoryPickerProps) {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState<CategoryValue>({
+  const [ownValue, setOwnValue] = useState<CategoryValue>({
     category: defaultCategory,
     subcategory: defaultSubcategory,
   });
   const [recents, setRecents] = useState<CategoryValue[]>([]);
+
+  const value = controlledValue ?? ownValue;
 
   useEffect(() => {
     // Reads localStorage, unavailable during SSR/initial render.
@@ -73,7 +82,8 @@ export function CategoryPicker({
   }, []);
 
   function handleSelect(next: CategoryValue) {
-    setValue(next);
+    if (controlledValue === undefined) setOwnValue(next);
+    onValueChange?.(next);
     saveRecent(next);
     setRecents(loadRecents());
     setOpen(false);

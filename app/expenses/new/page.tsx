@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { CategoryPicker } from '@/components/category-picker';
+import { ManualExpenseFields } from '@/components/manual-expense-fields';
 import { createManualExpense } from './actions';
 
 export default async function NewExpensePage() {
@@ -47,10 +47,9 @@ export default async function NewExpensePage() {
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label>Categorie — obligatoriu</Label>
-            <CategoryPicker defaultCategory="Altele" />
-          </div>
+          {/* Merchant and category are one unit now — the first proposes the
+              second — so they are rendered together and ahead of the date. */}
+          <ManualExpenseFields />
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="purchase_date">Data — obligatoriu</Label>
@@ -61,11 +60,6 @@ export default async function NewExpensePage() {
               required
               defaultValue={today}
             />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="merchant">Comerciant / titlu (opțional)</Label>
-            <Input id="merchant" name="merchant" placeholder="ex: Parcare centru" />
           </div>
 
           <div className="flex flex-col gap-1.5">
