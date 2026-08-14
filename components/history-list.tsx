@@ -204,10 +204,29 @@ export function HistoryList({
   }, [debouncedSearch, category, month, year, sort, who]);
 
   async function handleDelete(id: string) {
-    const response = await fetch(`/api/receipts/${id}`, { method: 'DELETE' });
-    if (response.ok) {
-      setReceipts((prev) => prev.filter((r) => r.id !== id));
+    setError(null);
+
+    // A failed delete used to drop out of this function silently: the
+    // confirmation dialog closed, the row stayed, and nothing said why.
+    let response: Response;
+    try {
+      response = await fetch(`/api/receipts/${id}`, { method: 'DELETE' });
+    } catch {
+      setError('Ștergerea nu a reușit. Verifică conexiunea și încearcă din nou.');
+      return;
     }
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setError(
+        data.error === 'forbidden'
+          ? 'Nu poți șterge această cheltuială — aparține altcuiva.'
+          : 'Ștergerea nu a reușit. Încearcă din nou.',
+      );
+      return;
+    }
+
+    setReceipts((prev) => prev.filter((r) => r.id !== id));
   }
 
   return (
