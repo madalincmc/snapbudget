@@ -37,54 +37,69 @@ const RULES: Rule[] = [
     subcategory: 'Combustibil',
     pattern: /\bomv\b|petrom|rompetrol|\bmol\b|lukoil|socar|combustibil/i,
   },
+  // Ridesharing before public transport, and both kept apart: a metro pass and
+  // a month of Uber are different habits, and lumping them made the only
+  // actionable half of the number invisible.
   {
     category: 'Transport',
-    subcategory: 'Transport public',
-    pattern: /\bratb\b|\bstb\b|metrorex|\bcfr\b|\buber\b|\bbolt\b|\btaxi\b/i,
+    subcategory: 'Taxi & Ridesharing',
+    pattern: /\buber\b|\bbolt\b|clever\s?taxi|\btaxi\b/i,
   },
   {
     category: 'Transport',
-    subcategory: 'Parcare & Taxe drum',
+    subcategory: 'Transport public',
+    pattern: /\bratb\b|\bstb\b|metrorex|\bcfr\b|\bmetrou\b/i,
+  },
+  {
+    category: 'Transport',
+    subcategory: 'Parcare & Drum',
     pattern: /parcare|rovinie[tț][aă]|autostrad[aă]/i,
   },
   {
     category: 'Transport',
     subcategory: 'Întreținere auto',
-    pattern: /vulcanizare|anvelope|service\s?auto/i,
+    pattern: /vulcanizare|anvelope|service\s?auto|\bitp\b/i,
   },
 
-  // Casă
+  // Locuință & Facturi — telecom is split out from the meters. One rule used to
+  // send Enel and Vodafone to the same place, which is how a prepaid top-up
+  // ended up filed as a household utility.
   {
-    category: 'Casă',
+    category: 'Locuință & Facturi',
+    subcategory: 'Telefon & Internet',
+    pattern: /vodafone|orange|telekom|\bdigi\b|rcs\s?(&|și)?\s?rds|cartel[aă]|re[iî]nc[aă]rcare/i,
+  },
+  {
+    category: 'Locuință & Facturi',
     subcategory: 'Utilități',
-    pattern: /\benel\b|engie|\be\.?on\b|\bdigi\b|rcs\s?(&|și)?\s?rds|vodafone|orange|telekom/i,
+    pattern: /\benel\b|engie|\be\.?on\b|hidroelectrica|apa\s?nova|distrigaz|\bgaz\b/i,
   },
   {
-    category: 'Casă',
-    subcategory: 'Mobilă & Electrocasnice',
-    pattern: /\bikea\b|mobexpert|\bjysk\b/i,
-  },
-  {
-    category: 'Casă',
-    subcategory: 'Renovări',
-    pattern: /dedeman|leroy\s?merlin|hornbach|brico\s?depot/i,
+    category: 'Locuință & Facturi',
+    subcategory: 'Întreținere & Reparații',
+    pattern: /dedeman|leroy\s?merlin|hornbach|brico\s?depot|[iî]ntre[tț]inere\s?bloc/i,
   },
 
-  // Sănătate
+  // Sănătate & Îngrijire
   {
-    category: 'Sănătate',
+    category: 'Sănătate & Îngrijire',
     subcategory: 'Farmacie',
     pattern: /sensiblu|catena|\bdona\b|help\s?net|farmacie/i,
   },
   {
-    category: 'Sănătate',
+    category: 'Sănătate & Îngrijire',
     subcategory: 'Medical',
-    pattern: /regina\s?maria|medlife|sanador/i,
+    pattern: /regina\s?maria|medlife|sanador|policlinic[aă]|stomatolog/i,
   },
   {
-    category: 'Sănătate',
-    subcategory: 'Fitness',
-    pattern: /world\s?class|7\s?card/i,
+    category: 'Sănătate & Îngrijire',
+    subcategory: 'Sport & Fitness',
+    pattern: /world\s?class|7\s?card|smartfit|s[aă]l[aă]\s?fitness/i,
+  },
+  {
+    category: 'Sănătate & Îngrijire',
+    subcategory: 'Îngrijire personală',
+    pattern: /frizerie|coafor|barber|salon|\bnotino\b|douglas/i,
   },
 
   // Cumpărături
@@ -95,49 +110,67 @@ const RULES: Rule[] = [
   },
   {
     category: 'Cumpărături',
-    subcategory: 'Îmbrăcăminte',
-    pattern: /\bh&m\b|\bzara\b|\bc&a\b|lc\s?waikiki/i,
+    subcategory: 'Îmbrăcăminte & Încălțăminte',
+    pattern: /\bh&m\b|\bzara\b|\bc&a\b|lc\s?waikiki|fashion\s?days|\bccc\b|deichmann/i,
   },
   {
     category: 'Cumpărături',
-    subcategory: 'Cumpărături generale',
-    pattern: /fashion\s?days/i,
+    subcategory: 'Casă & Decor',
+    // Dedeman is deliberately absent: it is matched above as Întreținere &
+    // Reparații, since a DIY store is far more often a repair run than a
+    // furniture purchase, and a second pattern here would never be reached.
+    pattern: /\bikea\b|mobexpert|\bjysk\b/i,
   },
 
-  // Familie
+  // Familie & Educație
   {
-    category: 'Familie',
+    category: 'Familie & Educație',
     subcategory: 'Animale de companie',
-    pattern: /maxi\s?zoo|pet\s?shop/i,
+    pattern: /maxi\s?zoo|pet\s?shop|veterinar/i,
+  },
+  {
+    category: 'Familie & Educație',
+    subcategory: 'Educație & Cursuri',
+    pattern: /udemy|coursera|\bcurs\b|libr[aă]rie|c[aă]rt[uă]re[sș]ti/i,
   },
 
-  // Divertisment
+  // Divertisment — named for what is bought, not for the fact that it recurs.
   {
     category: 'Divertisment',
-    subcategory: 'Abonamente',
-    pattern: /netflix|spotify|hbo\s?max|disney/i,
+    subcategory: 'Streaming & Media',
+    pattern: /netflix|spotify|hbo\s?max|disney|youtube\s?premium/i,
   },
   {
     category: 'Divertisment',
     subcategory: 'Filme & Jocuri',
-    pattern: /cinema\s?city|playstation/i,
+    pattern: /cinema\s?city|playstation|\bsteam\b|\bxbox\b/i,
   },
   {
     category: 'Divertisment',
-    subcategory: 'Călătorii & Timp liber',
-    pattern: /booking|airbnb|wizz\s?air|\btarom\b/i,
+    subcategory: 'Călătorii & Cazare',
+    pattern: /booking|airbnb|wizz\s?air|\btarom\b|blue\s?air/i,
+  },
+  {
+    category: 'Divertisment',
+    subcategory: 'Ieșiri & Evenimente',
+    pattern: /iabilet|eventim|bilete\.ro|festival/i,
   },
 
   // Financiar
   {
     category: 'Financiar',
     subcategory: 'Comisioane bancare',
-    pattern: /\bbcr\b|\bbrd\b|\bing\s?bank\b|banca\s?transilvania/i,
+    pattern: /\bbcr\b|\bbrd\b|\bing\s?bank\b|banca\s?transilvania|comision/i,
   },
   {
     category: 'Financiar',
     subcategory: 'Asigurări',
-    pattern: /allianz|groupama/i,
+    pattern: /allianz|groupama|asirom|\brca\b|\bcasco\b|asigurare/i,
+  },
+  {
+    category: 'Financiar',
+    subcategory: 'Taxe & Impozite',
+    pattern: /\banaf\b|impozit|ghi[sș]eul\.ro/i,
   },
 ];
 

@@ -19,7 +19,7 @@ export function RecurringForm({
   const today = new Date().toISOString().slice(0, 10);
   const defaultCategory: Category = isCategory(existing?.category ?? null)
     ? (existing!.category as Category)
-    : 'Casă';
+    : 'Locuință & Facturi';
 
   return (
     <form action={action} className="flex flex-col gap-4">
