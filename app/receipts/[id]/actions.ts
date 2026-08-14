@@ -33,7 +33,11 @@ export async function updateReceipt(id: string, formData: FormData) {
   const subcategoryRaw = String(formData.get('subcategory') ?? '').trim() || null;
   const subcategory = isSubcategoryOf(category, subcategoryRaw) ? subcategoryRaw : null;
 
-  const { error } = await supabase
+  // `.select()` for the same reason as the delete route: an UPDATE that
+  // row-level security narrows to zero rows reports no error, so without the
+  // returned rows this would redirect back to a list still showing the old
+  // values, as if the save had gone through.
+  const { data: updated, error } = await supabase
     .from('receipts')
     .update({
       merchant,
@@ -44,10 +48,15 @@ export async function updateReceipt(id: string, formData: FormData) {
       status: amount !== null ? 'processed' : 'pending',
       updated_at: new Date().toISOString(),
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  if (!updated?.length) {
+    throw new Error('Nu poți edita această cheltuială.');
   }
 
   const destination = returnPathFor(String(formData.get('from') ?? '') || undefined);
