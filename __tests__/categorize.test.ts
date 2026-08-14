@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { categorizeMerchant } from '@/lib/categorization/categorize';
+import { categorizeMerchant, suggestCategory } from '@/lib/categorization/categorize';
 import { CATEGORIES, SUBCATEGORIES, isSubcategoryOf, type Category } from '@/lib/categories';
 
 describe('taxonomy integrity', () => {
@@ -113,5 +113,29 @@ describe('merchant categorization', () => {
       subcategory: null,
     });
     expect(categorizeMerchant(null)).toEqual({ category: 'Altele', subcategory: null });
+  });
+});
+
+describe('suggestCategory', () => {
+  it('reports a miss instead of defaulting', () => {
+    // The manual form shows the result to the user, so "recognised nothing"
+    // has to be distinguishable from "recognised it as Altele".
+    expect(suggestCategory('Ceva Necunoscut SRL')).toBeNull();
+    expect(suggestCategory('')).toBeNull();
+    expect(suggestCategory(null)).toBeNull();
+  });
+
+  it('agrees with categorizeMerchant wherever a rule matches', () => {
+    for (const merchant of ['Orange', 'Lidl', 'Uber', 'Netflix', 'ANAF', 'Bolt Food']) {
+      expect(suggestCategory(merchant)).toEqual(categorizeMerchant(merchant));
+    }
+  });
+
+  it('recognises a partially typed merchant', () => {
+    // It runs on every keystroke, so it has to behave on half-finished input
+    // rather than only on a complete merchant name.
+    expect(suggestCategory('oran')).toBeNull();
+    expect(suggestCategory('orange')?.subcategory).toBe('Telefon & Internet');
+    expect(suggestCategory('Orange Romania SA')?.subcategory).toBe('Telefon & Internet');
   });
 });
