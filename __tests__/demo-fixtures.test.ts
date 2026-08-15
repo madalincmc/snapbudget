@@ -47,11 +47,21 @@ describe('demo fixtures', () => {
       }
     });
 
-    it(`keeps every row inside the three months it claims on ${label}`, () => {
-      const months = [0, 1, 2].map((back) => shiftMonthKey(monthKeyOf(now), -back));
+    it(`keeps every row inside the twelve months it claims on ${label}`, () => {
+      const months = Array.from({ length: 12 }, (_, back) => shiftMonthKey(monthKeyOf(now), -back));
 
       for (const r of demoReceipts(now)) {
         expect(months, `${r.merchant} on ${label}`).toContain(receiptMonth(r));
+      }
+    });
+
+    it(`leaves no month of the year empty on ${label}`, () => {
+      const rows = demoReceipts(now);
+
+      for (let back = 0; back < 12; back++) {
+        const month = shiftMonthKey(monthKeyOf(now), -back);
+        const spending = buildHouseholdSpending(rows, DEMO_MEMBERS, month);
+        expect(spending.total, `${month}, seen from ${label}`).toBeGreaterThan(0);
       }
     });
   }

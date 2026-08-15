@@ -1,129 +1,191 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, Crown, FlaskConical } from 'lucide-react';
-import { isMonthKey, monthKeyOf } from '@/lib/dashboard/aggregate';
-import { buildHouseholdSpending } from '@/lib/household/spending';
-import { DEMO_HOUSEHOLD_NAME, DEMO_ME, DEMO_MEMBERS, demoReceipts } from '@/lib/demo/fixtures';
-import { PageHeader } from '@/components/page-header';
-import { MemberAvatar } from '@/components/member-avatar';
-import { MemberSpendingCard } from '@/components/member-spending';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+import { ArrowRight, LogIn } from 'lucide-react';
+import {
+  buildDashboardData,
+  dashboardRange,
+  isMonthKey,
+  monthKeyOf,
+  toDateString,
+  type ReceiptRow,
+} from '@/lib/dashboard/aggregate';
+import { buildBudgetOverview, scopeForView } from '@/lib/budgets';
+import {
+  DEMO_HOUSEHOLD_BUDGETS,
+  DEMO_ME,
+  DEMO_ME_FIRST_NAME,
+  DEMO_MEMBERS,
+  DEMO_PERSONAL_BUDGETS,
+  demoReceipts,
+} from '@/lib/demo/fixtures';
+import { MonthPicker } from '@/components/month-picker';
+import { AppearanceMenu } from '@/components/appearance-menu';
+import { CategoryBreakdown } from '@/components/category-breakdown';
+import { MonthHeroCard } from '@/components/month-hero-card';
+import { TrendInsightCards } from '@/components/trend-insight-cards';
+import { SpendingTrendChart } from '@/components/spending-trend-chart';
+import { ReceiptsList } from '@/components/receipts-list';
+import { HouseholdFilter } from '@/components/household-filter';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { delay } from '@/lib/utils';
 
-export const metadata: Metadata = {
-  title: 'Demo — SnapBudget',
-  description: 'O gospodărie cu doi membri și cheltuielile lor, fără cont.',
-};
-
 /**
- * The household screen, on a household that does not exist.
+ * The dashboard, on the demo household.
  *
- * Two things it is for. Someone can be shown what shared expenses look like
- * without handing over a Google account first — and the screen can be opened
- * on any deployment, preview included, to check it renders, which sign-in
- * otherwise makes impossible from anything but a browser someone is sitting
- * at.
- *
- * The rows come from `lib/demo/fixtures` and go through the same
- * buildHouseholdSpending the signed-in page uses, into the same card. A demo
- * that renders its own copy of the UI would keep working long after the real
- * one broke, which is the opposite of useful.
+ * Deliberately the same components in the same order as `app/dashboard`, fed
+ * by the same buildDashboardData and buildBudgetOverview — including the "who"
+ * filter and the rule that decides which budget a view is measured against.
+ * The parts that cannot exist without an account are the only ones that
+ * differ: signing out, opening a receipt, and the quick links to screens the
+ * demo does not carry.
  */
-export default async function DemoPage({
+export default async function DemoDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ who?: string; month?: string }>;
 }) {
-  const { month: monthParam } = await searchParams;
+  const { who, month: monthParam } = await searchParams;
+
+  const validWho = who === 'me' || (who && DEMO_MEMBERS.some((m) => m.userId === who)) ? who : null;
+  const targetUserId = validWho === 'me' ? DEMO_ME : validWho;
 
   const now = new Date();
   const currentMonth = monthKeyOf(now);
   const month = isMonthKey(monthParam) && monthParam <= currentMonth ? monthParam : currentMonth;
+  const isCurrentMonth = month === currentMonth;
 
-  const spending = buildHouseholdSpending(demoReceipts(now), DEMO_MEMBERS, month);
+  const all = demoReceipts(now);
+  const mine = targetUserId ? all.filter((r) => r.user_id === targetUserId) : all;
+
+  // The same window the real page fetches: the month, the one before it for
+  // the comparison, and the trailing 30 days the chart needs on a live month.
+  const { from, to } = dashboardRange(month, now);
+  const inRange = mine.filter((r: ReceiptRow) => {
+    const day = r.purchase_date ?? r.created_at.slice(0, 10);
+    return day >= toDateString(from) && day < toDateString(to);
+  });
+
+  const latest = [...mine].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 5);
+
+  const {
+    categoryTotals,
+    comparison,
+    topCategory,
+    biggestExpense,
+    avgDailySpend,
+    dailyTrend,
+    monthTotal,
+  } = buildDashboardData(inRange, month, now);
+
+  const budgetScope = isCurrentMonth ? scopeForView(true, validWho ?? null) : null;
+  const budgets =
+    budgetScope === 'household'
+      ? DEMO_HOUSEHOLD_BUDGETS
+      : budgetScope === 'personal'
+        ? DEMO_PERSONAL_BUDGETS
+        : [];
+  const budgetOverview = buildBudgetOverview(budgets, monthTotal, categoryTotals, now);
+
+  const creators = Object.fromEntries(
+    DEMO_MEMBERS.map((m) => [m.userId, { displayName: m.displayName }]),
+  );
 
   return (
-    <div className="flex flex-1 justify-center px-4 py-5">
+    <div className="pb-nav flex flex-1 justify-center px-4 pt-5">
       <div className="flex w-full max-w-lg flex-col gap-5">
-        <PageHeader
-          title="Gospodărie"
-          description="Cheltuiți din conturi separate, vedeți aceleași totaluri"
-          backHref={null}
-        />
+        <header className="sb-fade flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-col">
+            <span className="text-muted-foreground text-xs">Salut,</span>
+            <h1 className="text-foreground truncate text-base leading-tight font-semibold">
+              {DEMO_ME_FIRST_NAME}
+            </h1>
+          </div>
 
-        <Alert className="sb-rise" style={delay(30)}>
-          <FlaskConical />
-          <AlertTitle>Date de demonstrație</AlertTitle>
-          <AlertDescription>
-            Ana și Bogdan nu există, iar cheltuielile lor nu sunt salvate nicăieri. Ecranul este
-            însă cel real, cu aceleași calcule.
-          </AlertDescription>
-        </Alert>
+          <div className="flex flex-none items-center gap-1">
+            <HouseholdFilter members={DEMO_MEMBERS} meUserId={DEMO_ME} />
+            <AppearanceMenu />
+            {/* Where the sign-out control sits in the real app. There is no
+                session to end here, so it offers to start one. */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground/70 hover:text-foreground"
+              nativeButton={false}
+              render={<Link href="/login" />}
+            >
+              <LogIn />
+              <span className="sr-only">Intră în cont</span>
+            </Button>
+          </div>
+        </header>
 
-        <Card className="sb-rise" style={delay(60)}>
+        <div className="sb-fade -mt-1 flex justify-center" style={delay(40)}>
+          <MonthPicker month={month} currentMonth={currentMonth} />
+        </div>
+
+        <Card className="sb-rise [--card-spacing:--spacing(5)]" style={delay(80)}>
           <CardContent>
-            <MemberSpendingCard
-              spending={spending}
-              meUserId={DEMO_ME}
+            <MonthHeroCard
+              comparison={comparison}
+              avgDailySpend={avgDailySpend}
               month={month}
-              currentMonth={currentMonth}
-              linkToDashboard={false}
+              isCurrentMonth={isCurrentMonth}
+              budget={budgetScope ? budgetOverview.overall : null}
             />
           </CardContent>
         </Card>
 
-        {/* The roster, without the invite and remove controls: those are server
-            actions that ask who you are, and here nobody is signed in. */}
-        <Card className="sb-rise" style={delay(130)}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <p className="text-foreground text-base font-medium">{DEMO_HOUSEHOLD_NAME}</p>
-              <Badge variant="outline" className="gap-1">
-                <Crown className="h-3 w-3" />
-                Proprietar
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <p className="text-muted-foreground text-sm font-medium">Membri</p>
-            <ul className="flex flex-col gap-3">
-              {DEMO_MEMBERS.map((m, index) => (
-                <li
-                  key={m.userId}
-                  style={delay(190 + index * 50)}
-                  className="sb-rise flex items-center gap-3"
-                >
-                  <MemberAvatar name={m.displayName} avatarUrl={m.avatarUrl} />
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="text-foreground truncate text-sm font-medium">
-                      {m.displayName}
-                      {m.userId === DEMO_ME && ' (tu)'}
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                      {m.role === 'owner' ? 'Proprietar' : 'Membru'}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+        <TrendInsightCards topCategory={topCategory} biggestExpense={biggestExpense} />
+
+        <Card className="sb-rise" style={delay(220)}>
+          <CardContent>
+            <CategoryBreakdown
+              categoryTotals={categoryTotals}
+              budgets={budgetOverview.byCategory}
+            />
           </CardContent>
         </Card>
 
-        <div className="sb-rise flex flex-col items-center gap-2 pb-2" style={delay(300)}>
-          <Button
-            size="lg"
-            className="h-11 rounded-full"
-            nativeButton={false}
-            render={<Link href="/login" />}
-          >
-            Începe cu gospodăria ta
-            <ArrowRight />
-          </Button>
-          <p className="text-muted-foreground text-xs">Te conectezi cu contul Google.</p>
-        </div>
+        <Card className="sb-rise" style={delay(290)}>
+          <CardContent>
+            <SpendingTrendChart data={dailyTrend} month={month} isCurrentMonth={isCurrentMonth} />
+          </CardContent>
+        </Card>
+
+        {isCurrentMonth && (
+          <Card className="sb-rise" style={delay(360)}>
+            <CardContent>
+              <ReceiptsList
+                receipts={latest}
+                meUserId={DEMO_ME}
+                creators={creators}
+                historyHref="/demo/history"
+                linkReceipts={false}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Stands in for the quick links to recurring, analytics and budgets:
+            those screens are not part of the demo, and a link that lands on a
+            login form is not a demo of anything. */}
+        <Card className="sb-rise" style={delay(430)}>
+          <CardContent className="flex flex-col items-start gap-3">
+            <div className="flex flex-col gap-1">
+              <p className="text-foreground text-sm font-medium">
+                Cheltuielile tale, în locul celor ale Anei
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Fotografiezi bonul, iar magazinul, suma și categoria se completează singure. Inviți
+                pe cine vrei în gospodărie și vedeți aceleași totaluri.
+              </p>
+            </div>
+            <Button className="rounded-full" nativeButton={false} render={<Link href="/login" />}>
+              Începe cu contul tău
+              <ArrowRight />
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
