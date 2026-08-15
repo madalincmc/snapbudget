@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Camera, Repeat2, Users } from 'lucide-react';
 import { GoogleSignInButton } from '@/components/google-sign-in-button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -51,8 +52,16 @@ export default async function LoginPage({
               ))}
             </ul>
 
-            <div className="sb-rise" style={delay(400)}>
+            <div className="sb-rise flex flex-col items-center gap-3" style={delay(400)}>
               <GoogleSignInButton next={next ?? '/dashboard'} />
+              {/* Somewhere to go for anyone not ready to hand over an account
+                  on the strength of three bullet points. */}
+              <Link
+                href="/demo"
+                className="text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
+              >
+                Vezi întâi un demo, fără cont
+              </Link>
             </div>
           </CardContent>
         </Card>
