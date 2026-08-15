@@ -100,12 +100,21 @@ export function HistoryList({
   members = [],
   meUserId,
   initial = {},
+  endpoint = '/api/receipts/history',
+  basePath = '/history',
+  readOnly = false,
 }: {
   members?: HouseholdMemberInfo[];
   meUserId?: string;
   /** Seeded from the URL by the page, so filters survive editing a receipt
    *  and coming back — and so a filtered view can be shared or bookmarked. */
   initial?: HistoryFilters;
+  /** Swapped for the demo's own rows; same query parameters either way. */
+  endpoint?: string;
+  /** Which path the filters are written back onto, and where a row returns to. */
+  basePath?: string;
+  /** Demo mode: no row opens for editing, and nothing can be deleted. */
+  readOnly?: boolean;
 }) {
   const [search, setSearch] = useState(initial.q ?? '');
   const [debouncedSearch, setDebouncedSearch] = useState(initial.q ?? '');
@@ -154,7 +163,7 @@ export function HistoryList({
     window.history.replaceState(null, '', url);
   }, [filterQuery]);
 
-  const returnTo = `/history${filterQuery ? `?${filterQuery}` : ''}`;
+  const returnTo = `${basePath}${filterQuery ? `?${filterQuery}` : ''}`;
 
   const WHO_ITEMS: Record<string, string> = {
     all: 'Toți',
@@ -182,7 +191,7 @@ export function HistoryList({
     if (who !== 'all') params.set('who', who);
 
     try {
-      const response = await fetch(`/api/receipts/history?${params.toString()}`);
+      const response = await fetch(`${endpoint}?${params.toString()}`);
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? 'Eroare la încărcare.');
 
@@ -368,7 +377,10 @@ export function HistoryList({
           ) : (
             <>
               <p className="text-muted-foreground text-sm">Nicio cheltuială încă.</p>
-              <Button nativeButton={false} render={<Link href="/receipts/new" />}>
+              <Button
+                nativeButton={false}
+                render={<Link href={readOnly ? '/login' : '/receipts/new'} />}
+              >
                 Adaugă primul bon
               </Button>
             </>
@@ -392,22 +404,34 @@ export function HistoryList({
                 thumbnailUrl={r.thumbnailUrl}
               />
 
-              <Link
-                href={`/receipts/${r.id}?from=${encodeURIComponent(returnTo)}`}
-                className="flex min-w-0 flex-1 flex-col gap-0.5"
-              >
-                <span className="text-foreground flex items-center gap-1.5 text-sm font-medium">
-                  <span className="truncate">{r.merchant ?? 'Bon fără nume'}</span>
-                  {meUserId && r.user_id !== meUserId && (
-                    <MemberChip name={creators[r.user_id] ?? null} />
-                  )}
-                  <SourceBadge source={r.source} />
-                </span>
-                <span className="text-muted-foreground text-xs">
-                  {formatListDate(r.purchase_date ?? r.created_at)}
-                  {r.amount !== null && ` · ${r.subcategory ?? r.category ?? 'Altele'}`}
-                </span>
-              </Link>
+              {(() => {
+                const details = (
+                  <>
+                    <span className="text-foreground flex items-center gap-1.5 text-sm font-medium">
+                      <span className="truncate">{r.merchant ?? 'Bon fără nume'}</span>
+                      {meUserId && r.user_id !== meUserId && (
+                        <MemberChip name={creators[r.user_id] ?? null} />
+                      )}
+                      <SourceBadge source={r.source} />
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {formatListDate(r.purchase_date ?? r.created_at)}
+                      {r.amount !== null && ` · ${r.subcategory ?? r.category ?? 'Altele'}`}
+                    </span>
+                  </>
+                );
+
+                return readOnly ? (
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">{details}</div>
+                ) : (
+                  <Link
+                    href={`/receipts/${r.id}?from=${encodeURIComponent(returnTo)}`}
+                    className="flex min-w-0 flex-1 flex-col gap-0.5"
+                  >
+                    {details}
+                  </Link>
+                );
+              })()}
 
               <div className="flex flex-none items-center gap-2">
                 {r.amount !== null ? (
@@ -419,37 +443,39 @@ export function HistoryList({
                   <StatusBadge status={r.status} />
                 )}
 
-                <AlertDialog>
-                  {/* Muted until reached for. In destructive red on every row
+                {!readOnly && (
+                  <AlertDialog>
+                    {/* Muted until reached for. In destructive red on every row
                       it was the loudest thing on the screen, which put the
                       strongest visual pull on the one irreversible action. */}
-                  <AlertDialogTrigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 focus-visible:text-destructive"
-                      >
-                        <Trash2 />
-                        <span className="sr-only">Șterge bonul</span>
-                      </Button>
-                    }
-                  />
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Ștergi acest bon?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {r.merchant ?? 'Acest bon'} va fi șters definitiv. Nu poate fi anulat.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Anulează</AlertDialogCancel>
-                      <AlertDialogAction variant="destructive" onClick={() => handleDelete(r.id)}>
-                        Șterge
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                    <AlertDialogTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 focus-visible:text-destructive"
+                        >
+                          <Trash2 />
+                          <span className="sr-only">Șterge bonul</span>
+                        </Button>
+                      }
+                    />
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Ștergi acest bon?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {r.merchant ?? 'Acest bon'} va fi șters definitiv. Nu poate fi anulat.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Anulează</AlertDialogCancel>
+                        <AlertDialogAction variant="destructive" onClick={() => handleDelete(r.id)}>
+                          Șterge
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </div>
             </li>
           ))}

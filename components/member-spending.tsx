@@ -25,7 +25,7 @@ function MemberRow({
   month,
   currentMonth,
   showShare,
-  linkToDashboard,
+  dashboardPath,
   index,
 }: {
   member: MemberSpending;
@@ -34,7 +34,7 @@ function MemberRow({
   month: MonthKey;
   currentMonth: MonthKey;
   showShare: boolean;
-  linkToDashboard: boolean;
+  dashboardPath: string;
   index: number;
 }) {
   const { userId, displayName, avatarUrl, total, count, share } = member;
@@ -87,14 +87,13 @@ function MemberRow({
     // Offset past the card's own entrance, so the rows arrive into a card that
     // is already there rather than alongside it.
     <li className="sb-rise" style={delay(120 + index * 60)}>
-      {userId === null || !linkToDashboard ? (
-        // Either a roll-up of people who have left, with nobody to drill into,
-        // or the demo, where the dashboard behind the link needs an account.
+      {userId === null ? (
+        // Nobody to drill into: the row is a roll-up of people who have left.
         <div className={className}>{content}</div>
       ) : (
         <Link
           href={{
-            pathname: '/dashboard',
+            pathname: dashboardPath,
             query: month === currentMonth ? { who: userId } : { who: userId, month },
           }}
           className={className}
@@ -119,14 +118,14 @@ export function MemberSpendingCard({
   meUserId,
   month,
   currentMonth,
-  linkToDashboard = true,
+  dashboardPath = '/dashboard',
 }: {
   spending: HouseholdSpending;
   meUserId: string;
   month: MonthKey;
   currentMonth: MonthKey;
-  /** Off for /demo, where the dashboard the rows point at needs a real account. */
-  linkToDashboard?: boolean;
+  /** Which dashboard a row opens — the demo has its own, at /demo. */
+  dashboardPath?: string;
 }) {
   const { total, members, max } = spending;
   const periodLabel = month === currentMonth ? 'luna aceasta' : monthKeyLabel(month);
@@ -163,7 +162,7 @@ export function MemberSpendingCard({
               // One member is not a comparison, so the percentage would only be
               // a permanent "100%".
               showShare={members.length > 1}
-              linkToDashboard={linkToDashboard}
+              dashboardPath={dashboardPath}
               index={index}
             />
           ))}

@@ -5,10 +5,18 @@ import { usePathname } from 'next/navigation';
 import { Camera, House, History, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const TABS = [
+const APP_TABS = [
   { href: '/dashboard', label: 'Acasă', icon: House },
   { href: '/history', label: 'Istoric', icon: History },
   { href: '/household', label: 'Gospodărie', icon: Users },
+];
+
+// The same three screens under /demo. Spelled out rather than prefixed: the
+// dashboard is `/demo` itself, so there is no prefix that produces all three.
+const DEMO_TABS = [
+  { href: '/demo', label: 'Acasă', icon: House },
+  { href: '/demo/history', label: 'Istoric', icon: History },
+  { href: '/demo/household', label: 'Gospodărie', icon: Users },
 ];
 
 /**
@@ -20,11 +28,21 @@ const TABS = [
  * core promise, so it stays one tap from anywhere instead of occupying the top
  * of the dashboard ahead of the data.
  */
-export function BottomNav() {
+export function BottomNav({ variant = 'app' }: { variant?: 'app' | 'demo' }) {
   const pathname = usePathname();
 
-  const activeIndex = TABS.findIndex(
-    ({ href }) => pathname === href || pathname.startsWith(`${href}/`),
+  const demo = variant === 'demo';
+  const TABS = demo ? DEMO_TABS : APP_TABS;
+
+  // `/demo` is a prefix of every demo tab, so the plain startsWith test would
+  // light up "Acasă" on all three. Only the deepest match counts.
+  const activeIndex = TABS.reduce(
+    (best, { href }, index) =>
+      (pathname === href || pathname.startsWith(`${href}/`)) &&
+      (best === -1 || href.length > TABS[best].href.length)
+        ? index
+        : best,
+    -1,
   );
 
   return (
@@ -81,8 +99,10 @@ export function BottomNav() {
       </nav>
 
       <Link
-        href="/receipts/new"
-        aria-label="Adaugă bon"
+        // Scanning a receipt needs an account and an OCR call, so in the demo
+        // the button leads to the one place that can give you both.
+        href={demo ? '/login' : '/receipts/new'}
+        aria-label={demo ? 'Adaugă bon — creează-ți cont' : 'Adaugă bon'}
         style={{ viewTransitionName: 'scan-button' }}
         className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring/50 shadow-primary/30 group/scan fixed right-[max(1rem,calc(50%-16rem+1rem))] bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg transition-all duration-200 hover:shadow-xl focus-visible:ring-3 focus-visible:outline-none active:translate-y-px active:scale-90"
       >
