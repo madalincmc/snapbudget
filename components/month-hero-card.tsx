@@ -2,18 +2,11 @@ import type * as React from 'react';
 import Link from 'next/link';
 import { ArrowRight, Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { monthKeyLabel } from '@/lib/dashboard/format';
+import { money, monthKeyLabel } from '@/lib/dashboard/format';
 import { shiftMonthKey, type MonthComparison, type MonthKey } from '@/lib/dashboard/aggregate';
 import { AnimatedNumber } from '@/components/animated-number';
 import { BudgetBar, BUDGET_TEXT_CLASS } from '@/components/budget-bar';
 import type { BudgetProgress } from '@/lib/budgets';
-
-/** Thousands separated by a thin space — "2 767.77" scans far faster than "2767.77". */
-function money(value: number, decimals = 2): string {
-  const [whole, fraction] = value.toFixed(decimals).split('.');
-  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  return fraction ? `${grouped}.${fraction}` : grouped;
-}
 
 /**
  * The one card that answers the question people open the app for: how much,

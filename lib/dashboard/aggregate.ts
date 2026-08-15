@@ -94,7 +94,7 @@ function dayKeyOf(receipt: ReceiptRow): string {
 }
 
 /** The month a row belongs to — the same fallback the rest of the app uses. */
-function monthOf(receipt: ReceiptRow): MonthKey {
+export function receiptMonth(receipt: ReceiptRow): MonthKey {
   return dayKeyOf(receipt).slice(0, 7);
 }
 
@@ -129,7 +129,8 @@ export function dashboardRange(month: MonthKey, now = new Date()): { from: Date;
   };
 }
 
-function isSpent(r: ReceiptRow): boolean {
+/** Whether a row is money actually spent: processed, and with an amount on it. */
+export function isSpent(r: ReceiptRow): boolean {
   return r.status === 'processed' && r.amount !== null;
 }
 
@@ -148,8 +149,8 @@ export function buildDashboardData(
   const previousMonth = shiftMonthKey(month, -1);
   const isCurrentMonth = month === monthKeyOf(now);
 
-  const monthly = receipts.filter((r) => isSpent(r) && monthOf(r) === month);
-  const previousMonthly = receipts.filter((r) => isSpent(r) && monthOf(r) === previousMonth);
+  const monthly = receipts.filter((r) => isSpent(r) && receiptMonth(r) === month);
+  const previousMonthly = receipts.filter((r) => isSpent(r) && receiptMonth(r) === previousMonth);
 
   const monthTotal = monthly.reduce((sum, r) => sum + (r.amount ?? 0), 0);
   const previousTotal = previousMonthly.reduce((sum, r) => sum + (r.amount ?? 0), 0);
