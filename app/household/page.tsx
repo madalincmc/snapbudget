@@ -2,7 +2,12 @@ import { redirect } from 'next/navigation';
 import { Crown, Mail, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { delay } from '@/lib/utils';
+import { isMonthKey, monthKeyOf, monthKeyToDate, type ReceiptRow } from '@/lib/dashboard/aggregate';
+import { expensesBetween } from '@/lib/dashboard/query';
+import { buildHouseholdSpending } from '@/lib/household/spending';
 import { PageHeader } from '@/components/page-header';
+import { MemberAvatar } from '@/components/member-avatar';
+import { MemberSpendingCard } from '@/components/member-spending';
 import { BottomNav } from '@/components/bottom-nav';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -28,22 +33,12 @@ import {
   leaveHousehold,
 } from './actions';
 
-function MemberAvatar({ name, avatarUrl }: { name: string | null; avatarUrl: string | null }) {
-  if (avatarUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={avatarUrl} alt="" className="h-10 w-10 flex-none rounded-full object-cover" />
-    );
-  }
-  const initial = (name ?? '?').trim().charAt(0).toUpperCase() || '?';
-  return (
-    <div className="bg-accent text-accent-foreground flex h-10 w-10 flex-none items-center justify-center rounded-full text-sm font-semibold">
-      {initial}
-    </div>
-  );
-}
-
-export default async function HouseholdPage() {
+export default async function HouseholdPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
+  const { month: monthParam } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -111,11 +106,39 @@ export default async function HouseholdPage() {
     .eq('id', membership.household_id)
     .single();
 
-  const { data: members } = await supabase
-    .from('household_members')
-    .select('id, user_id, role, display_name, email, avatar_url')
-    .eq('household_id', membership.household_id)
-    .order('joined_at', { ascending: true });
+  const now = new Date();
+  const currentMonth = monthKeyOf(now);
+  // A malformed or future month falls back to the current one — same rule the
+  // dashboard applies to its own `month` param.
+  const month = isMonthKey(monthParam) && monthParam <= currentMonth ? monthParam : currentMonth;
+  const monthStart = monthKeyToDate(month);
+  const nextMonthStart = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
+
+  const [{ data: members }, { data: monthExpenses }] = await Promise.all([
+    supabase
+      .from('household_members')
+      .select('id, user_id, role, display_name, email, avatar_url')
+      .eq('household_id', membership.household_id)
+      .order('joined_at', { ascending: true }),
+    // Scoped to the household rather than left to RLS: a member's expenses from
+    // before they joined stay theirs alone, and nobody else can see them — so
+    // counting them here would show each person a different number for the same
+    // month, and a side-by-side comparison has to read the same for everyone.
+    expensesBetween(supabase, monthStart, nextMonthStart).eq(
+      'household_id',
+      membership.household_id,
+    ),
+  ]);
+
+  const spending = buildHouseholdSpending(
+    (monthExpenses ?? []) as ReceiptRow[],
+    (members ?? []).map((m) => ({
+      userId: m.user_id,
+      displayName: m.display_name,
+      avatarUrl: m.avatar_url,
+    })),
+    month,
+  );
 
   const isOwner = membership.role === 'owner';
 
@@ -133,7 +156,20 @@ export default async function HouseholdPage() {
       <div className="flex w-full max-w-lg flex-col gap-5">
         {header}
 
+        {/* First card on the tab: the totals are what the household is opened
+            for, where the roster below it is administration. */}
         <Card className="sb-rise" style={delay(60)}>
+          <CardContent>
+            <MemberSpendingCard
+              spending={spending}
+              meUserId={user.id}
+              month={month}
+              currentMonth={currentMonth}
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="sb-rise" style={delay(130)}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <p className="text-foreground text-base font-medium">{household?.name}</p>
@@ -151,7 +187,7 @@ export default async function HouseholdPage() {
               {(members ?? []).map((m, index) => (
                 <li
                   key={m.id}
-                  style={delay(120 + index * 50)}
+                  style={delay(190 + index * 50)}
                   className="sb-rise flex items-center gap-3"
                 >
                   <MemberAvatar name={m.display_name} avatarUrl={m.avatar_url} />
@@ -231,7 +267,7 @@ export default async function HouseholdPage() {
         </Card>
 
         {isOwner && (
-          <Card className="sb-rise" style={delay(160)}>
+          <Card className="sb-rise" style={delay(230)}>
             <CardHeader>
               <p className="text-foreground text-base font-medium">Invită un membru</p>
               <p className="text-muted-foreground text-sm">

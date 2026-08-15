@@ -28,6 +28,13 @@ const MONTH_LONG = [
   'decembrie',
 ];
 
+/** Thousands separated by a space — "2 767.77" scans far faster than "2767.77". */
+export function money(value: number, decimals = 2): string {
+  const [whole, fraction] = value.toFixed(decimals).split('.');
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return fraction ? `${grouped}.${fraction}` : grouped;
+}
+
 /** Formats a "YYYY-MM-DD" date string as a short Romanian label, e.g. "12 aug". */
 export function formatDayLabel(dateStr: string): string {
   const [, month, day] = dateStr.split('-');

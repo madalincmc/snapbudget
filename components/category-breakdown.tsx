@@ -6,6 +6,7 @@ import { ChevronDown } from 'lucide-react';
 import { CATEGORY_BAR_CLASS, type Category } from '@/lib/categories';
 import { BUDGET_TEXT_CLASS } from '@/components/budget-bar';
 import { cn } from '@/lib/utils';
+import { money } from '@/lib/dashboard/format';
 import type { BudgetProgress } from '@/lib/budgets';
 import type { CategoryTotal } from '@/lib/dashboard/aggregate';
 
@@ -13,12 +14,6 @@ import type { CategoryTotal } from '@/lib/dashboard/aggregate';
 const VISIBLE_COUNT = 5;
 /** Segments the composition bar carries before the tail is rolled up. */
 const SEGMENT_COUNT = 6;
-
-function money(value: number, decimals = 2): string {
-  const [whole, fraction] = value.toFixed(decimals).split('.');
-  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  return fraction ? `${grouped}.${fraction}` : grouped;
-}
 
 interface Slice {
   category: Category;
