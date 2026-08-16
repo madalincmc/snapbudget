@@ -53,10 +53,15 @@ export default async function HistoryPage({
           initial={{
             q: one('q'),
             category: one('category'),
-            month: one('month'),
-            year: one('year'),
+            period: one('period'),
+            from: one('from'),
+            to: one('to'),
             sort: one('sort'),
             who: one('who'),
+            // Still read so a link shared before the date range existed opens
+            // on the month it was pointing at.
+            month: one('month'),
+            year: one('year'),
           }}
         />
       </div>

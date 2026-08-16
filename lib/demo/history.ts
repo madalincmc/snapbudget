@@ -1,5 +1,6 @@
 import type { ReceiptRow } from '@/lib/dashboard/aggregate';
 import { isCategory } from '@/lib/categories';
+import { isDateKey } from '@/lib/history/date-range';
 import { DEMO_ME } from '@/lib/demo/fixtures';
 
 /** Same page size as the real endpoint, so "Încarcă mai multe" behaves the same. */
@@ -8,8 +9,9 @@ export const DEMO_PAGE_SIZE = 30;
 export interface DemoHistoryQuery {
   q?: string;
   category?: string;
-  /** "YYYY-MM". */
-  month?: string;
+  /** Inclusive "YYYY-MM-DD" bounds on purchase_date; either may be absent. */
+  from?: string;
+  to?: string;
   who?: string;
   sort?: string;
   offset?: number;
@@ -54,12 +56,12 @@ function compare(a: ReceiptRow, b: ReceiptRow, key: Key, ascending: boolean): nu
  *
  * It is a second implementation of what PostgREST does in the real route, and
  * deliberately a narrow one: same six sorts, same page size, nulls last, a
- * month filter that reads purchase_date only — so a row with no date on it
- * drops out of a month filter here exactly as it does there, rather than
- * looking like a bug the moment someone compares the two screens.
+ * date range that reads purchase_date only — so a row with no date on it drops
+ * out of a period here exactly as it does there, rather than looking like a bug
+ * the moment someone compares the two screens.
  */
 export function demoHistoryPage(rows: ReceiptRow[], query: DemoHistoryQuery): DemoHistoryPage {
-  const { q = '', category = '', month = '', who = '', sort = 'date_desc' } = query;
+  const { q = '', category = '', from = '', to = '', who = '', sort = 'date_desc' } = query;
   const offset = Math.max(0, query.offset ?? 0);
 
   let matched = rows;
@@ -79,8 +81,14 @@ export function demoHistoryPage(rows: ReceiptRow[], query: DemoHistoryQuery): De
     matched = matched.filter((r) => r.category === category);
   }
 
-  if (/^\d{4}-\d{2}$/.test(month)) {
-    matched = matched.filter((r) => r.purchase_date?.startsWith(month) ?? false);
+  // "YYYY-MM-DD" sorts lexicographically the same way it does chronologically,
+  // so the bounds compare as plain strings — and a null date fails both, which
+  // is what a NULL comparison does in the real query.
+  if (isDateKey(from)) {
+    matched = matched.filter((r) => r.purchase_date !== null && r.purchase_date >= from);
+  }
+  if (isDateKey(to)) {
+    matched = matched.filter((r) => r.purchase_date !== null && r.purchase_date <= to);
   }
 
   const { key, ascending } = SORTS[sort] ?? SORTS.date_desc;

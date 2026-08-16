@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { isCategory } from '@/lib/categories';
+import { isDateKey } from '@/lib/history/date-range';
 
 const PAGE_SIZE = 30;
 
@@ -25,7 +26,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get('q')?.trim() ?? '';
   const categoryParam = searchParams.get('category') ?? '';
-  const month = searchParams.get('month') ?? '';
+  // Already resolved to calendar dates by the browser, which is the only place
+  // that knows what "this month" means in the reader's timezone.
+  const from = searchParams.get('from') ?? '';
+  const to = searchParams.get('to') ?? '';
   const sort = searchParams.get('sort') ?? 'date_desc';
   const offset = Math.max(0, Number(searchParams.get('offset') ?? '0') || 0);
   const who = searchParams.get('who') ?? '';
@@ -50,13 +54,15 @@ export async function GET(request: Request) {
   if (isCategory(categoryParam)) {
     query = query.eq('category', categoryParam);
   }
-  if (/^\d{4}-\d{2}$/.test(month)) {
-    const [year, monthNum] = month.split('-').map(Number);
-    const start = `${month}-01`;
-    const nextMonth = monthNum === 12 ? 1 : monthNum + 1;
-    const nextYear = monthNum === 12 ? year + 1 : year;
-    const end = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
-    query = query.gte('purchase_date', start).lt('purchase_date', end);
+  // Inclusive on both ends, and each end applied on its own so an open-ended
+  // interval ("everything since March") is a single bound rather than a special
+  // case. A row with no purchase_date drops out either way — NULL compares
+  // false — which is what the dateless rows did under the old month filter too.
+  if (isDateKey(from)) {
+    query = query.gte('purchase_date', from);
+  }
+  if (isDateKey(to)) {
+    query = query.lte('purchase_date', to);
   }
 
   const { column, ascending } = SORT_MAP[sort] ?? SORT_MAP.date_desc;

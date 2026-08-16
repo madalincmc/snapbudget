@@ -4,8 +4,9 @@ import { PageHeader } from '@/components/page-header';
 
 /**
  * The history screen, on the demo household — the real list component, with
- * its search, its four filters and its six sorts, pointed at `/api/demo/
- * history` instead of the endpoint that asks who you are.
+ * its search, its date range, its category and member filters and its six
+ * sorts, pointed at `/api/demo/history` instead of the endpoint that asks who
+ * you are.
  *
  * Read-only: a row does not open for editing and nothing can be deleted,
  * because both need an account and a database behind them.
@@ -38,10 +39,13 @@ export default async function DemoHistoryPage({
           initial={{
             q: one('q'),
             category: one('category'),
-            month: one('month'),
-            year: one('year'),
+            period: one('period'),
+            from: one('from'),
+            to: one('to'),
             sort: one('sort'),
             who: one('who'),
+            month: one('month'),
+            year: one('year'),
           }}
         />
       </div>

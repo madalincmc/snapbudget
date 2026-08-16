@@ -2,11 +2,19 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Search, Trash2 } from 'lucide-react';
+import { CalendarRange, Search, Trash2, X } from 'lucide-react';
 import { CATEGORIES } from '@/lib/categories';
 import { SourceBadge, StatusBadge, ReceiptThumbnail } from '@/components/receipt-badges';
 import { MemberChip } from '@/components/member-chip';
+import { DateRangeFilter } from '@/components/date-range-filter';
 import { formatListDate } from '@/lib/dashboard/format';
+import {
+  dateFilterParams,
+  describeDateRange,
+  normalizeDateFilter,
+  resolveDateRange,
+  type DateFilter,
+} from '@/lib/history/date-range';
 import { cn } from '@/lib/utils';
 import type { HouseholdMemberInfo } from '@/lib/household/membership';
 import { Input } from '@/components/ui/input';
@@ -53,34 +61,9 @@ const SORT_OPTIONS = [
   { value: 'merchant_desc', label: 'Comerciant Z–A' },
 ];
 
-const MONTH_NAMES = [
-  'Ianuarie',
-  'Februarie',
-  'Martie',
-  'Aprilie',
-  'Mai',
-  'Iunie',
-  'Iulie',
-  'August',
-  'Septembrie',
-  'Octombrie',
-  'Noiembrie',
-  'Decembrie',
-];
-
-const CURRENT_YEAR = new Date().getFullYear();
-const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => String(CURRENT_YEAR - i));
-
 const CATEGORY_ITEMS: Record<string, string> = {
   all: 'Toate categoriile',
   ...Object.fromEntries(CATEGORIES.map((c) => [c, c])),
-};
-
-const MONTH_ITEMS: Record<string, string> = {
-  all: 'Toate lunile',
-  ...Object.fromEntries(
-    MONTH_NAMES.map((name, index) => [String(index + 1).padStart(2, '0'), name]),
-  ),
 };
 
 const SORT_ITEMS: Record<string, string> = Object.fromEntries(
@@ -90,10 +73,14 @@ const SORT_ITEMS: Record<string, string> = Object.fromEntries(
 export interface HistoryFilters {
   q?: string;
   category?: string;
-  month?: string;
-  year?: string;
+  period?: string;
+  from?: string;
+  to?: string;
   sort?: string;
   who?: string;
+  /** Written by the month select the date range replaced; still read, never written. */
+  month?: string;
+  year?: string;
 }
 
 export function HistoryList({
@@ -119,8 +106,7 @@ export function HistoryList({
   const [search, setSearch] = useState(initial.q ?? '');
   const [debouncedSearch, setDebouncedSearch] = useState(initial.q ?? '');
   const [category, setCategory] = useState(initial.category ?? 'all');
-  const [month, setMonth] = useState(initial.month ?? 'all');
-  const [year, setYear] = useState(initial.year ?? String(CURRENT_YEAR));
+  const [dateFilter, setDateFilter] = useState<DateFilter>(() => normalizeDateFilter(initial));
   const [sort, setSort] = useState(initial.sort ?? 'date_desc');
   const [who, setWho] = useState(initial.who ?? 'all');
 
@@ -132,12 +118,12 @@ export function HistoryList({
   const creators = Object.fromEntries(members.map((m) => [m.userId, m.displayName]));
 
   const hasActiveFilters =
-    debouncedSearch !== '' || category !== 'all' || month !== 'all' || who !== 'all';
+    debouncedSearch !== '' || category !== 'all' || dateFilter.period !== 'all' || who !== 'all';
 
   function resetFilters() {
     setSearch('');
     setCategory('all');
-    setMonth('all');
+    setDateFilter({ period: 'all' });
     setWho('all');
   }
 
@@ -145,9 +131,8 @@ export function HistoryList({
   const filterParams = new URLSearchParams();
   if (debouncedSearch) filterParams.set('q', debouncedSearch);
   if (category !== 'all') filterParams.set('category', category);
-  if (month !== 'all') {
-    filterParams.set('month', month);
-    filterParams.set('year', year);
+  for (const [key, value] of Object.entries(dateFilterParams(dateFilter))) {
+    filterParams.set(key, value);
   }
   if (sort !== 'date_desc') filterParams.set('sort', sort);
   if (who !== 'all') filterParams.set('who', who);
@@ -187,8 +172,13 @@ export function HistoryList({
     const params = new URLSearchParams({ sort, offset: String(offset) });
     if (debouncedSearch) params.set('q', debouncedSearch);
     if (category !== 'all') params.set('category', category);
-    if (month !== 'all') params.set('month', `${year}-${month}`);
     if (who !== 'all') params.set('who', who);
+
+    // Resolved here rather than in the URL: a preset means whatever it means on
+    // the reader's clock, and this runs only in their browser.
+    const range = resolveDateRange(dateFilter);
+    if (range?.from) params.set('from', range.from);
+    if (range?.to) params.set('to', range.to);
 
     try {
       const response = await fetch(`${endpoint}?${params.toString()}`);
@@ -210,7 +200,7 @@ export function HistoryList({
     fetchPage(0, true);
     // fetchPage is stable across renders (reads current state via closure by design).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, category, month, year, sort, who]);
+  }, [debouncedSearch, category, dateFilter, sort, who]);
 
   async function handleDelete(id: string) {
     setError(null);
@@ -256,6 +246,10 @@ export function HistoryList({
           The mask fades the trailing edge so a half-visible control reads as
           "more to the right" rather than as a clipped layout. */}
       <div className="-mx-1 flex [scrollbar-width:none] gap-2 overflow-x-auto [mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] px-1 pb-1 [&::-webkit-scrollbar]:hidden">
+        {/* First in the row: it is the widest cut of the three, and the one
+            the other filters are read as narrowing. */}
+        <DateRangeFilter value={dateFilter} onValueChange={setDateFilter} />
+
         <Select
           items={CATEGORY_ITEMS}
           value={category}
@@ -273,39 +267,6 @@ export function HistoryList({
             ))}
           </SelectContent>
         </Select>
-
-        <Select
-          items={MONTH_ITEMS}
-          value={month}
-          onValueChange={(value) => setMonth(value ?? 'all')}
-        >
-          <SelectTrigger className="h-9 w-auto flex-none whitespace-nowrap">
-            <SelectValue placeholder="Lună" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toate lunile</SelectItem>
-            {MONTH_NAMES.map((name, index) => (
-              <SelectItem key={name} value={String(index + 1).padStart(2, '0')}>
-                {name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {month !== 'all' && (
-          <Select value={year} onValueChange={(value) => setYear(value ?? String(CURRENT_YEAR))}>
-            <SelectTrigger className="h-9 w-auto flex-none whitespace-nowrap">
-              <SelectValue placeholder="An" />
-            </SelectTrigger>
-            <SelectContent>
-              {YEAR_OPTIONS.map((y) => (
-                <SelectItem key={y} value={y}>
-                  {y}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
 
         <Select
           items={SORT_ITEMS}
@@ -339,6 +300,26 @@ export function HistoryList({
           </Select>
         )}
       </div>
+
+      {/* The scoped period, restated above the results. The trigger above shows
+          it too, but that one scrolls out of view on a phone — and this is the
+          filter that silently explains why a receipt someone remembers adding
+          is not in the list. */}
+      {dateFilter.period !== 'all' && (
+        <div className="text-muted-foreground -mt-1 flex items-center gap-1.5 text-xs">
+          <CalendarRange className="size-3.5 flex-none" />
+          <span className="text-foreground font-medium">{describeDateRange(dateFilter)}</span>
+          <Button
+            variant="ghost"
+            size="xs"
+            className="text-muted-foreground -my-1 ml-auto"
+            onClick={() => setDateFilter({ period: 'all' })}
+          >
+            <X />
+            Toată perioada
+          </Button>
+        </div>
+      )}
 
       {error && <p className="text-destructive text-sm">{error}</p>}
 
