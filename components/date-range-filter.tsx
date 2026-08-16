@@ -87,10 +87,12 @@ export function DateRangeFilter({
         }
       />
 
-      {/* Wide enough for a date field at the 16px the inputs keep on a phone —
-          they need ~215px of it — and capped to the viewport so the widening
-          does not push the popover off a narrow screen. */}
-      <PopoverContent align="start" className="w-[min(20rem,calc(100vw-2rem))]">
+      {/* As wide as a phone will take, capped to the viewport so it cannot be
+          pushed off the side of a narrow one. The width is here for the date
+          fields below: how much a native date control needs is the platform's
+          business, not ours, so the answer is to leave it room rather than to
+          budget it. */}
+      <PopoverContent align="start" className="w-[min(22rem,calc(100vw-2rem))]">
         <div className="flex flex-col gap-0.5">
           {PRESET_PERIODS.map((period) => (
             <Button
@@ -108,29 +110,39 @@ export function DateRangeFilter({
         <div className="border-border flex flex-col gap-2.5 border-t pt-2.5">
           <p className="text-muted-foreground text-xs">Interval personalizat</p>
 
-          {/* Label beside the field rather than above it, one field per row.
-              Side by side the two fields had about 130px each, which a date
-              control — value plus the platform's own picker icon — overflows
-              on a phone, so they ended up lapping over one another. */}
-          <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2">
+          {/* Each field gets the popover's full width, with its label above.
+              A native date control renders its value and picker icon in shadow
+              DOM that does not shrink to the box around it, and how much it
+              needs depends on the platform's date format and font — so it is
+              given all the room there is rather than a share worked out against
+              one device. Beside the label it had 235px, and the internals still
+              spilled past the popover edge on a phone.
+
+              px-2 rather than the input default: a few more pixels inside the
+              box are worth more here than the symmetry. */}
+          <div className="flex flex-col gap-1">
             <Label htmlFor="range-from" className="text-muted-foreground text-xs font-normal">
               De la
             </Label>
             <Input
               id="range-from"
               type="date"
+              className="px-2"
               value={from}
               max={isDateKey(to) ? to : undefined}
               onClick={openPicker}
               onChange={(e) => setFrom(e.target.value)}
             />
+          </div>
 
+          <div className="flex flex-col gap-1">
             <Label htmlFor="range-to" className="text-muted-foreground text-xs font-normal">
               Până la
             </Label>
             <Input
               id="range-to"
               type="date"
+              className="px-2"
               value={to}
               min={isDateKey(from) ? from : undefined}
               onClick={openPicker}
