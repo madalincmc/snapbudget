@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildDailyTrend,
   buildDashboardData,
   dashboardRange,
   daysInMonthKey,
   isMonthKey,
   monthKeyOf,
+  receiptCategory,
   recentMonthKeys,
   shiftMonthKey,
   toDateString,
@@ -222,6 +224,52 @@ describe('buildDashboardData', () => {
 
     expect(data.monthTotal).toBe(10);
     expect(data.comparison.previousTotal).toBe(20);
+  });
+});
+
+describe('receiptCategory', () => {
+  it('buckets anything unset or unrecognised into Altele', () => {
+    expect(receiptCategory(expense({ amount: 1, category: 'Transport' }))).toBe('Transport');
+    expect(receiptCategory(expense({ amount: 1, category: null }))).toBe('Altele');
+    expect(receiptCategory(expense({ amount: 1, category: 'Abonamente' }))).toBe('Altele');
+  });
+});
+
+describe('buildDailyTrend on a filtered set', () => {
+  const now = new Date(2026, 7, 11);
+
+  const rows = [
+    expense({ amount: 100, category: 'Transport', purchase_date: '2026-08-03' }),
+    expense({ amount: 40, category: 'Transport', purchase_date: '2026-08-03' }),
+    expense({ amount: 25, category: 'Mâncare & Băutură', purchase_date: '2026-08-03' }),
+    // Outside the month, inside the trailing 30-day window the live month charts.
+    expense({ amount: 60, category: 'Transport', purchase_date: '2026-07-20' }),
+  ];
+
+  it('charts only the rows it is given', () => {
+    const transport = rows.filter((r) => receiptCategory(r) === 'Transport');
+    const trend = buildDailyTrend(transport, '2026-08', now);
+
+    expect(trend.find((d) => d.date === '2026-08-03')?.total).toBe(140);
+    expect(trend.find((d) => d.date === '2026-07-20')?.total).toBe(60);
+  });
+
+  it('agrees with the breakdown total the category screen is opened from', () => {
+    // The invariant behind the screen: what the chart adds up to over the month
+    // is the number the dashboard row showed for that category.
+    const breakdown = buildDashboardData(rows, '2026-08', now).categoryTotals;
+    const transportTotal = breakdown.find((c) => c.category === 'Transport')!.total;
+
+    const charted = buildDailyTrend(
+      rows.filter((r) => receiptCategory(r) === 'Transport'),
+      '2026-08',
+      now,
+    )
+      .filter((d) => d.date.startsWith('2026-08'))
+      .reduce((sum, d) => sum + d.total, 0);
+
+    expect(charted).toBe(transportTotal);
+    expect(charted).toBe(140);
   });
 });
 

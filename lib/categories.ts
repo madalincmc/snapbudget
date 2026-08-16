@@ -176,6 +176,25 @@ export function isCategory(value: string | null): value is Category {
   return (CATEGORIES as readonly string[]).includes(value ?? '');
 }
 
+/**
+ * Reverse of CATEGORY_TOKEN, for the category screen's URL segment. The stems
+ * are already short, ASCII and stable across renames, which is exactly what a
+ * path needs — "Mâncare & Băutură" in a URL is neither.
+ *
+ * A Map rather than an object: the token comes off the URL, and a plain object
+ * would answer `categoryFromToken('constructor')` with something truthy.
+ */
+const CATEGORY_BY_TOKEN = new Map<string, Category>(
+  (Object.entries(CATEGORY_TOKEN) as [Category, string][]).map(([category, token]) => [
+    token,
+    category,
+  ]),
+);
+
+export function categoryFromToken(token: string | undefined): Category | null {
+  return (token ? CATEGORY_BY_TOKEN.get(token) : null) ?? null;
+}
+
 export function isSubcategoryOf(category: Category, value: string | null): boolean {
   if (!value) return false;
   return (SUBCATEGORIES[category] as readonly string[]).includes(value);

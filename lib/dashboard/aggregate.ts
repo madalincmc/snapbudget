@@ -89,13 +89,21 @@ export function recentMonthKeys(count: number, now = new Date()): MonthKey[] {
   return Array.from({ length: count }, (_, i) => shiftMonthKey(latest, i - (count - 1)));
 }
 
-function dayKeyOf(receipt: ReceiptRow): string {
+/** The day a row belongs to — purchase_date when it has one, else the day it
+ *  was entered. Manual and backdated rows can have no purchase_date. */
+export function receiptDay(receipt: ReceiptRow): string {
   return (receipt.purchase_date ?? receipt.created_at).slice(0, 10);
 }
 
 /** The month a row belongs to — the same fallback the rest of the app uses. */
 export function receiptMonth(receipt: ReceiptRow): MonthKey {
-  return dayKeyOf(receipt).slice(0, 7);
+  return receiptDay(receipt).slice(0, 7);
+}
+
+/** The bucket a row is charted under. Anything unset or no longer a category
+ *  falls into "Altele", so a total never silently loses rows. */
+export function receiptCategory(receipt: ReceiptRow): Category {
+  return isCategory(receipt.category) ? receipt.category : 'Altele';
 }
 
 /** Formats a local Date as "YYYY-MM-DD", matching the DB's date-string format. */
@@ -170,7 +178,7 @@ export function buildDashboardData(
 
   const totals = new Map<Category, number>(CATEGORIES.map((category) => [category, 0]));
   for (const r of monthly) {
-    const category = isCategory(r.category) ? r.category : 'Altele';
+    const category = receiptCategory(r);
     totals.set(category, (totals.get(category) ?? 0) + (r.amount ?? 0));
   }
 
@@ -196,7 +204,7 @@ export function buildDashboardData(
   const daysElapsed = isCurrentMonth ? now.getDate() : daysInMonthKey(month);
   const avgDailySpend = daysElapsed > 0 ? monthTotal / daysElapsed : 0;
 
-  const dailyTrend = buildDailyTrend(receipts, month, now, isCurrentMonth);
+  const dailyTrend = buildDailyTrend(receipts, month, now);
 
   return {
     monthTotal,
@@ -217,16 +225,22 @@ export function buildDashboardData(
 }
 
 /**
+ * Zero-filled daily totals for one period.
+ *
  * The live month keeps its trailing-30-day window, which deliberately spans two
  * calendar months so recent behaviour stays visible across the boundary. A
  * finished month has no "trailing" to speak of, so it charts its own days.
+ *
+ * Exported because the category screen charts the same window over a subset of
+ * the same rows — reusing this is what makes its chart line up, day for day,
+ * with the dashboard's.
  */
-function buildDailyTrend(
+export function buildDailyTrend(
   receipts: ReceiptRow[],
   month: MonthKey,
-  now: Date,
-  isCurrentMonth: boolean,
+  now = new Date(),
 ): DailySpend[] {
+  const isCurrentMonth = month === monthKeyOf(now);
   const orderedDays: string[] = [];
 
   if (isCurrentMonth) {
@@ -245,7 +259,7 @@ function buildDailyTrend(
   const totals = new Map(orderedDays.map((day) => [day, 0]));
   for (const r of receipts) {
     if (!isSpent(r)) continue;
-    const key = dayKeyOf(r);
+    const key = receiptDay(r);
     if (totals.has(key)) {
       totals.set(key, (totals.get(key) ?? 0) + (r.amount ?? 0));
     }

@@ -9,6 +9,8 @@ import {
   type ReceiptRow,
 } from '@/lib/dashboard/aggregate';
 import { expensesBetween, RECEIPT_COLUMNS } from '@/lib/dashboard/query';
+import { categoryPath } from '@/lib/dashboard/links';
+import { CATEGORIES, type Category } from '@/lib/categories';
 import { getHouseholdMembership, type HouseholdMemberInfo } from '@/lib/household/membership';
 import {
   buildBudgetOverview,
@@ -196,6 +198,16 @@ export default async function DashboardPage({
   const budgets = budgetRows.map(parseBudgetRow).filter((b): b is Budget => b !== null);
   const budgetOverview = buildBudgetOverview(budgets, monthTotal, categoryTotals, now);
 
+  // Each breakdown row opens that category on the month and member in view.
+  // Built here rather than in the component because the path builder cannot
+  // cross into a client component as a function prop.
+  const categoryHrefs = Object.fromEntries(
+    CATEGORIES.map((c) => [
+      c,
+      categoryPath(c, { month: isCurrentMonth ? null : month, who: validWho }),
+    ]),
+  ) as Record<Category, string>;
+
   return (
     <div className="pb-nav flex flex-1 justify-center px-4 pt-5">
       {/* gap-5 between sections, tighter inside them: the page had one uniform
@@ -265,6 +277,7 @@ export default async function DashboardPage({
                 <CategoryBreakdown
                   categoryTotals={categoryTotals}
                   budgets={budgetOverview.byCategory}
+                  categoryHrefs={categoryHrefs}
                 />
               </CardContent>
             </Card>
