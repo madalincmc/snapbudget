@@ -1,10 +1,31 @@
 import { describe, expect, it } from 'vitest';
 import { monthKeyOf } from '@/lib/dashboard/aggregate';
 import { DEMO_ANA, DEMO_BOGDAN, DEMO_ME, demoReceipts } from '@/lib/demo/fixtures';
-import { DEMO_PAGE_SIZE, demoHistoryPage } from '@/lib/demo/history';
+import {
+  DEMO_PAGE_SIZE,
+  demoHistoryPage,
+  type DemoHistoryPage,
+  type DemoHistoryQuery,
+} from '@/lib/demo/history';
 
 const now = new Date(2026, 7, 15);
 const rows = demoReceipts(now);
+
+/** Every date the fixtures actually landed on, ascending and deduplicated. */
+const dates = [...new Set(rows.map((r) => r.purchase_date).filter((d) => d !== null))].sort();
+
+/**
+ * Every row a query matches, not just the first page of them — a range test
+ * that only looked at page one would miss whichever end the sort puts last.
+ */
+function matchAll(query: DemoHistoryQuery) {
+  const all: DemoHistoryPage['receipts'] = [];
+  for (let offset = 0; ; offset += DEMO_PAGE_SIZE) {
+    const page = demoHistoryPage(rows, { ...query, offset });
+    all.push(...page.receipts);
+    if (!page.hasMore) return all;
+  }
+}
 
 describe('demoHistoryPage', () => {
   it('returns a first page and says there is more behind it', () => {
@@ -68,15 +89,59 @@ describe('demoHistoryPage', () => {
     expect(nonsense.receipts).toHaveLength(DEMO_PAGE_SIZE);
   });
 
-  it('filters by month on purchase_date only, the way the real endpoint does', () => {
-    const month = monthKeyOf(now);
-    const page = demoHistoryPage(rows, { month });
+  it('filters by a date range on purchase_date only, the way the real endpoint does', () => {
+    // Taken from the rows themselves rather than hardcoded: the fixtures are
+    // generated relative to `now`, so a literal date would only sometimes fall
+    // on one of them.
+    const [from, to] = [dates[2], dates[dates.length - 3]];
+    const matched = matchAll({ from, to });
 
-    expect(page.receipts.length).toBeGreaterThan(0);
-    expect(page.receipts.every((r) => r.purchase_date?.startsWith(month))).toBe(true);
+    expect(matched.length).toBeGreaterThan(0);
+    expect(matched.every((r) => r.purchase_date! >= from && r.purchase_date! <= to)).toBe(true);
+    // Both ends are in the range, not half-open like the month filter this
+    // replaced.
+    expect(matched.some((r) => r.purchase_date === from)).toBe(true);
+    expect(matched.some((r) => r.purchase_date === to)).toBe(true);
     // The row with no date is excluded — a NULL comparison is false in Postgres
     // too, and the two screens have to agree.
-    expect(page.receipts.some((r) => r.purchase_date === null)).toBe(false);
+    expect(matched.some((r) => r.purchase_date === null)).toBe(false);
+  });
+
+  it('leaves an end open when given only one bound', () => {
+    const cutoff = dates[3];
+
+    const since = matchAll({ from: cutoff });
+    expect(since.every((r) => r.purchase_date! >= cutoff)).toBe(true);
+
+    const until = matchAll({ to: cutoff });
+    expect(until.every((r) => r.purchase_date! <= cutoff)).toBe(true);
+
+    // Between them they account for every dated row, counting the cutoff twice.
+    const dated = rows.filter((r) => r.purchase_date !== null).length;
+    const onCutoff = rows.filter((r) => r.purchase_date === cutoff).length;
+    expect(since.length + until.length).toBe(dated + onCutoff);
+  });
+
+  it('ignores a bound it cannot read rather than dropping every row', () => {
+    const page = demoHistoryPage(rows, { from: '2026-02-31', to: 'cândva' });
+    expect(page.receipts).toHaveLength(DEMO_PAGE_SIZE);
+  });
+
+  it('keeps the range alongside a search, a category and a sort', () => {
+    const month = monthKeyOf(now);
+    const page = demoHistoryPage(rows, {
+      from: `${month}-01`,
+      to: dates[dates.length - 1],
+      category: 'Transport',
+      sort: 'amount_desc',
+    });
+
+    for (const r of page.receipts) {
+      expect(r.category).toBe('Transport');
+      expect(r.purchase_date! >= `${month}-01`).toBe(true);
+    }
+    const amounts = page.receipts.map((r) => r.amount!);
+    expect([...amounts].sort((a, b) => b - a)).toEqual(amounts);
   });
 
   it('narrows to one member, with "me" meaning the demo account', () => {

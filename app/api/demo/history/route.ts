@@ -11,7 +11,7 @@ import { demoHistoryPage } from '@/lib/demo/history';
  * return 401 here.
  *
  * Read-only by construction: it holds no client, touches no database, and
- * takes nothing from the request but the same six query parameters.
+ * takes nothing from the request but the same seven query parameters.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -19,7 +19,8 @@ export async function GET(request: Request) {
   const page = demoHistoryPage(demoReceipts(), {
     q: searchParams.get('q') ?? undefined,
     category: searchParams.get('category') ?? undefined,
-    month: searchParams.get('month') ?? undefined,
+    from: searchParams.get('from') ?? undefined,
+    to: searchParams.get('to') ?? undefined,
     who: searchParams.get('who') ?? undefined,
     sort: searchParams.get('sort') ?? undefined,
     offset: Number(searchParams.get('offset') ?? '0') || 0,
