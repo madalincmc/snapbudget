@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
 import { CalendarRange } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,29 @@ import {
  * that gets the platform's own picker on a phone, which beats anything a
  * hand-rolled calendar would manage in the same amount of code.
  */
+/**
+ * Opens the platform's date picker on a click anywhere in the field.
+ *
+ * A native date input only opens its picker from the small icon at its trailing
+ * edge; clicking the value itself just puts the caret in a segment to be typed
+ * over. That is a fiddly target, and typing a date is not what anyone came here
+ * to do — so the whole field becomes the button that opens the picker.
+ *
+ * Reached by keyboard the field still takes a typed date, since this hangs off
+ * the click alone.
+ */
+function openPicker(event: MouseEvent<HTMLInputElement>) {
+  const input = event.currentTarget;
+  if (typeof input.showPicker !== 'function') return;
+
+  try {
+    input.showPicker();
+  } catch {
+    // Throws when the picker is already open — clicking the native icon opens
+    // it too — and on browsers that have none to show. Typing still works.
+  }
+}
+
 export function DateRangeFilter({
   value,
   onValueChange,
@@ -64,7 +87,10 @@ export function DateRangeFilter({
         }
       />
 
-      <PopoverContent align="start" className="w-72">
+      {/* Wide enough for a date field at the 16px the inputs keep on a phone —
+          they need ~215px of it — and capped to the viewport so the widening
+          does not push the popover off a narrow screen. */}
+      <PopoverContent align="start" className="w-[min(20rem,calc(100vw-2rem))]">
         <div className="flex flex-col gap-0.5">
           {PRESET_PERIODS.map((period) => (
             <Button
@@ -79,34 +105,37 @@ export function DateRangeFilter({
           ))}
         </div>
 
-        <div className="border-border flex flex-col gap-2 border-t pt-2.5">
+        <div className="border-border flex flex-col gap-2.5 border-t pt-2.5">
           <p className="text-muted-foreground text-xs">Interval personalizat</p>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="range-from" className="text-muted-foreground text-xs font-normal">
-                De la
-              </Label>
-              <Input
-                id="range-from"
-                type="date"
-                value={from}
-                max={isDateKey(to) ? to : undefined}
-                onChange={(e) => setFrom(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="range-to" className="text-muted-foreground text-xs font-normal">
-                Până la
-              </Label>
-              <Input
-                id="range-to"
-                type="date"
-                value={to}
-                min={isDateKey(from) ? from : undefined}
-                onChange={(e) => setTo(e.target.value)}
-              />
-            </div>
+          {/* Label beside the field rather than above it, one field per row.
+              Side by side the two fields had about 130px each, which a date
+              control — value plus the platform's own picker icon — overflows
+              on a phone, so they ended up lapping over one another. */}
+          <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2">
+            <Label htmlFor="range-from" className="text-muted-foreground text-xs font-normal">
+              De la
+            </Label>
+            <Input
+              id="range-from"
+              type="date"
+              value={from}
+              max={isDateKey(to) ? to : undefined}
+              onClick={openPicker}
+              onChange={(e) => setFrom(e.target.value)}
+            />
+
+            <Label htmlFor="range-to" className="text-muted-foreground text-xs font-normal">
+              Până la
+            </Label>
+            <Input
+              id="range-to"
+              type="date"
+              value={to}
+              min={isDateKey(from) ? from : undefined}
+              onClick={openPicker}
+              onChange={(e) => setTo(e.target.value)}
+            />
           </div>
 
           {/* One end is enough — "everything since 1 March" is a period too. */}
