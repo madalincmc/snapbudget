@@ -7,8 +7,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CategoryPicker } from '@/components/category-picker';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Trash2 } from 'lucide-react';
 import { returnPathFor } from '@/lib/receipts/return-path';
-import { updateReceipt } from './actions';
+import { updateReceipt, deleteReceipt } from './actions';
 
 export default async function ReceiptDetailPage({
   params,
@@ -44,6 +56,7 @@ export default async function ReceiptDetailPage({
     : { data: null };
 
   const updateReceiptWithId = updateReceipt.bind(null, id);
+  const deleteReceiptWithId = deleteReceipt.bind(null, id);
 
   return (
     <div className="flex flex-1 justify-center px-6 py-10">
@@ -105,6 +118,35 @@ export default async function ReceiptDetailPage({
             Salvează
           </Button>
         </form>
+
+        <AlertDialog>
+          <AlertDialogTrigger
+            render={
+              <Button variant="ghost" className="text-destructive self-start">
+                <Trash2 />
+                Șterge cheltuiala
+              </Button>
+            }
+          />
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Ștergi acest bon?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {receipt.merchant ?? 'Acest bon'} va fi șters definitiv, împreună cu poza lui. Nu
+                poate fi anulat.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Anulează</AlertDialogCancel>
+              <form action={deleteReceiptWithId}>
+                <input type="hidden" name="from" value={from ?? ''} />
+                <AlertDialogAction type="submit" variant="destructive">
+                  Șterge
+                </AlertDialogAction>
+              </form>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
