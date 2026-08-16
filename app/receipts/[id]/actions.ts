@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { CATEGORIES, isSubcategoryOf, type Category } from '@/lib/categories';
 import { returnPathFor } from '@/lib/receipts/return-path';
+import { deleteReceipt as deleteReceiptRow } from '@/lib/receipts/delete';
 
 export async function updateReceipt(id: string, formData: FormData) {
   const supabase = await createClient();
@@ -33,7 +34,7 @@ export async function updateReceipt(id: string, formData: FormData) {
   const subcategoryRaw = String(formData.get('subcategory') ?? '').trim() || null;
   const subcategory = isSubcategoryOf(category, subcategoryRaw) ? subcategoryRaw : null;
 
-  // `.select()` for the same reason as the delete route: an UPDATE that
+  // `.select()` for the same reason as `deleteReceipt`: an UPDATE that
   // row-level security narrows to zero rows reports no error, so without the
   // returned rows this would redirect back to a list still showing the old
   // values, as if the save had gone through.
@@ -62,5 +63,34 @@ export async function updateReceipt(id: string, formData: FormData) {
   const destination = returnPathFor(String(formData.get('from') ?? '') || undefined);
   revalidatePath('/dashboard');
   revalidatePath('/history');
+  redirect(destination);
+}
+
+export async function deleteReceipt(id: string, formData: FormData) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect('/login');
+  }
+
+  const result = await deleteReceiptRow(supabase, id);
+
+  if (!result.ok) {
+    throw new Error(
+      result.reason === 'forbidden'
+        ? 'Nu poți șterge această cheltuială — aparține altcuiva.'
+        : result.reason === 'not_found'
+          ? 'Cheltuiala nu mai există.'
+          : result.message,
+    );
+  }
+
+  const destination = returnPathFor(String(formData.get('from') ?? '') || undefined);
+  revalidatePath('/dashboard');
+  revalidatePath('/history');
+  // Deleting happens from the receipt's own page, which no longer exists.
   redirect(destination);
 }
