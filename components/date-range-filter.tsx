@@ -87,12 +87,14 @@ export function DateRangeFilter({
         }
       />
 
-      {/* As wide as a phone will take, capped to the viewport so it cannot be
-          pushed off the side of a narrow one. The width is here for the date
-          fields below: how much a native date control needs is the platform's
-          business, not ours, so the answer is to leave it room rather than to
-          budget it. */}
-      <PopoverContent align="start" className="w-[min(22rem,calc(100vw-2rem))]">
+      {/* Capped to the viewport so it cannot hang off the side of a narrow
+          screen. The underscores matter: calc() requires whitespace around a
+          binary minus, and `calc(100vw-2rem)` is invalid CSS — the browser
+          drops the whole declaration, silently, taking the width with it. */}
+      <PopoverContent
+        align="start"
+        className="w-[22rem] max-w-[calc(100vw_-_2rem)] overflow-hidden"
+      >
         <div className="flex flex-col gap-0.5">
           {PRESET_PERIODS.map((period) => (
             <Button
@@ -110,16 +112,15 @@ export function DateRangeFilter({
         <div className="border-border flex flex-col gap-2.5 border-t pt-2.5">
           <p className="text-muted-foreground text-xs">Interval personalizat</p>
 
-          {/* Each field gets the popover's full width, with its label above.
-              A native date control renders its value and picker icon in shadow
-              DOM that does not shrink to the box around it, and how much it
-              needs depends on the platform's date format and font — so it is
-              given all the room there is rather than a share worked out against
-              one device. Beside the label it had 235px, and the internals still
-              spilled past the popover edge on a phone.
+          {/* Each field gets the popover's full width, with its label above, so
+              both sit the popover's own padding in from either edge rather than
+              on a width worked out against one device's date format.
 
-              px-2 rather than the input default: a few more pixels inside the
-              box are worth more here than the symmetry. */}
+              w-full/max-w-full/min-w-0 is belt and braces: whatever the width
+              above resolves to, a field cannot come out wider than the box it
+              is in. A native date control clips its own contents, so the field
+              only ever looks like it escapes when its box genuinely is too
+              wide. */}
           <div className="flex flex-col gap-1">
             <Label htmlFor="range-from" className="text-muted-foreground text-xs font-normal">
               De la
@@ -127,7 +128,7 @@ export function DateRangeFilter({
             <Input
               id="range-from"
               type="date"
-              className="px-2"
+              className="w-full max-w-full min-w-0 px-2"
               value={from}
               max={isDateKey(to) ? to : undefined}
               onClick={openPicker}
@@ -142,7 +143,7 @@ export function DateRangeFilter({
             <Input
               id="range-to"
               type="date"
-              className="px-2"
+              className="w-full max-w-full min-w-0 px-2"
               value={to}
               min={isDateKey(from) ? from : undefined}
               onClick={openPicker}
