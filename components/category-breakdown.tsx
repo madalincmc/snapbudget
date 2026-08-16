@@ -2,7 +2,8 @@
 
 import type * as React from 'react';
 import { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { CATEGORY_BAR_CLASS, type Category } from '@/lib/categories';
 import { BUDGET_TEXT_CLASS } from '@/components/budget-bar';
 import { cn } from '@/lib/utils';
@@ -85,6 +86,7 @@ function CategoryRow({
   dimmed,
   onActivate,
   delay,
+  href,
 }: {
   category: Category;
   total: number;
@@ -95,6 +97,8 @@ function CategoryRow({
   dimmed: boolean;
   onActivate: (category: Category | null) => void;
   delay: number;
+  /** Set makes the row open that category's screen; absent leaves it inert. */
+  href?: string;
 }) {
   // The bar is scaled to the biggest category, not to the limit, so the tick
   // lands where the limit actually falls against its peers. A limit above the
@@ -102,17 +106,22 @@ function CategoryRow({
   // reads as "not reached yet".
   const tickPercent = budget && max > 0 ? Math.min((budget.budget.amount / max) * 100, 99) : null;
 
-  return (
-    <div
-      onPointerEnter={() => onActivate(category)}
-      onPointerLeave={() => onActivate(null)}
-      style={{ '--sb-delay': `${delay}ms` } as React.CSSProperties}
-      className={cn(
-        'sb-rise -mx-1.5 flex flex-col gap-1.5 rounded-lg px-1.5 py-1 transition-[opacity,background-color] duration-200',
-        active && 'bg-muted/60',
-        dimmed && 'opacity-45',
-      )}
-    >
+  // Same element either way, so the row keeps its hover state, its stagger and
+  // its spacing whether or not there is somewhere to go.
+  const rowProps = {
+    onPointerEnter: () => onActivate(category),
+    onPointerLeave: () => onActivate(null),
+    style: { '--sb-delay': `${delay}ms` } as React.CSSProperties,
+    className: cn(
+      'group/cat sb-rise -mx-1.5 flex flex-col gap-1.5 rounded-lg px-1.5 py-1 transition-[opacity,background-color] duration-200',
+      active && 'bg-muted/60',
+      dimmed && 'opacity-45',
+      href && 'sb-press hover:bg-muted/60',
+    ),
+  };
+
+  const content = (
+    <>
       <div className="flex items-baseline justify-between gap-2 text-sm">
         <span className="flex min-w-0 items-baseline gap-2">
           {/* The swatch is what ties this row to its segment in the bar above. */}
@@ -141,6 +150,14 @@ function CategoryRow({
             {money(total)}
             <span className="text-muted-foreground/70 text-xs"> lei</span>
           </span>
+          {/* The one affordance that survives a touchscreen, where there is no
+              hover to reveal that the row leads anywhere. */}
+          {href && (
+            <ChevronRight
+              className="text-muted-foreground/40 h-3.5 w-3.5 self-center transition-transform duration-200 group-hover/cat:translate-x-0.5"
+              aria-hidden
+            />
+          )}
         </span>
       </div>
 
@@ -174,16 +191,34 @@ function CategoryRow({
           </span>
         </p>
       )}
-    </div>
+    </>
+  );
+
+  return href ? (
+    <Link href={href} aria-label={`${category} — vezi cheltuielile`} {...rowProps}>
+      {content}
+    </Link>
+  ) : (
+    <div {...rowProps}>{content}</div>
   );
 }
 
 export function CategoryBreakdown({
   categoryTotals,
   budgets = {},
+  categoryHrefs = {},
 }: {
   categoryTotals: CategoryTotal[];
   budgets?: Partial<Record<Category, BudgetProgress>>;
+  /**
+   * Per-category destinations, prebuilt on the server. A function that maps a
+   * category to a path would be the obvious shape and cannot be used: this is a
+   * client component, and a function prop does not survive the boundary.
+   *
+   * Left empty in the demo, where the rows have nowhere to lead — the category
+   * screen needs an account, same as the receipt detail screen.
+   */
+  categoryHrefs?: Partial<Record<Category, string>>;
 }) {
   const [active, setActive] = useState<Category | null>(null);
 
@@ -250,6 +285,7 @@ export function CategoryBreakdown({
                 dimmed={active !== null && active !== category}
                 onActivate={setActive}
                 delay={index * 50}
+                href={categoryHrefs[category]}
               />
             ))}
 

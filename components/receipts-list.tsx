@@ -14,24 +14,36 @@ export function ReceiptsList({
   receipts,
   meUserId,
   creators,
+  title = 'Ultimele cheltuieli',
+  emptyLabel = 'Nicio cheltuială încă.',
   historyHref = '/history',
   linkReceipts = true,
+  from,
 }: {
   receipts: ReceiptRow[];
   meUserId?: string;
   creators?: Record<string, CreatorInfo>;
-  /** Where "Vezi tot" goes — the demo has a history of its own. */
-  historyHref?: string;
+  /** The category screen shows a whole month, not the last few. */
+  title?: string;
+  emptyLabel?: string;
+  /** Where "Vezi tot" goes — the demo has a history of its own. Null drops the
+   *  link, for a list that is already everything there is. */
+  historyHref?: string | null;
   /** Off in the demo: there is no receipt detail screen without an account. */
   linkReceipts?: boolean;
+  /** Carried into the receipt links so saving or deleting returns here. */
+  from?: string;
 }) {
+  const receiptHref = (id: string) =>
+    from ? `/receipts/${id}?from=${encodeURIComponent(from)}` : `/receipts/${id}`;
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-          Ultimele cheltuieli
+          {title}
         </h2>
-        {receipts.length > 0 && (
+        {historyHref && receipts.length > 0 && (
           <Link
             href={historyHref}
             className="text-muted-foreground hover:text-foreground group/all inline-flex items-center gap-1 text-xs transition-colors"
@@ -43,7 +55,7 @@ export function ReceiptsList({
       </div>
 
       {receipts.length === 0 ? (
-        <p className="text-muted-foreground text-sm">Nicio cheltuială încă.</p>
+        <p className="text-muted-foreground text-sm">{emptyLabel}</p>
       ) : (
         <ul className="divide-border flex flex-col divide-y">
           {receipts.map((r, index) => {
@@ -86,7 +98,7 @@ export function ReceiptsList({
               >
                 {linkReceipts ? (
                   <Link
-                    href={`/receipts/${r.id}`}
+                    href={receiptHref(r.id)}
                     className="sb-press hover:bg-muted/50 -mx-2 flex items-center gap-3 rounded-lg px-2 py-3"
                   >
                     {row}
