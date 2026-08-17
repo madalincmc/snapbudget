@@ -1,12 +1,61 @@
 import { describe, expect, it } from 'vitest';
 import {
   INVITATION_TTL_DAYS,
+  canonicalEmail,
   daysLeft,
   invitationEmail,
   invitationExpiry,
   invitationUrl,
   isExpired,
 } from '@/lib/household/invitations';
+
+describe('canonicalEmail', () => {
+  it('treats every spelling of one Gmail mailbox as the same address', () => {
+    const forms = [
+      'madalincotetiu@gmail.com',
+      'madalin.cotetiu@gmail.com',
+      'm.a.d.a.l.i.n.c.o.t.e.t.i.u@gmail.com',
+      'madalincotetiu+snapbudget@gmail.com',
+      'madalin.cotetiu+test@gmail.com',
+      'MADALIN.COTETIU@Gmail.com',
+      '  madalincotetiu@gmail.com  ',
+    ];
+
+    for (const form of forms) {
+      expect(canonicalEmail(form), form).toBe('madalincotetiu@gmail.com');
+    }
+  });
+
+  it('folds googlemail onto gmail — same mailbox, older name', () => {
+    expect(canonicalEmail('ana.pop@googlemail.com')).toBe('anapop@gmail.com');
+  });
+
+  it('leaves other providers alone, dots included', () => {
+    // A dot is a significant character everywhere else. Stripping it here
+    // would quietly point an invitation at a different person.
+    expect(canonicalEmail('ana.pop@yahoo.com')).toBe('ana.pop@yahoo.com');
+    expect(canonicalEmail('Ana.Pop@Outlook.com')).toBe('ana.pop@outlook.com');
+    expect(canonicalEmail('ana+tag@fastmail.com')).toBe('ana+tag@fastmail.com');
+  });
+
+  it('keeps two genuinely different Gmail users apart', () => {
+    expect(canonicalEmail('anapop@gmail.com')).not.toBe(canonicalEmail('ana.popescu@gmail.com'));
+  });
+
+  it('is idempotent, so a stored value can be re-canonicalised safely', () => {
+    const once = canonicalEmail('madalin.cotetiu+x@gmail.com');
+    expect(canonicalEmail(once)).toBe(once);
+  });
+
+  it('does not fall over on something that is not an address', () => {
+    expect(canonicalEmail('nu-e-email')).toBe('nu-e-email');
+    expect(canonicalEmail('')).toBe('');
+  });
+
+  it('splits on the last @, so a local part containing one is handled', () => {
+    expect(canonicalEmail('"a@b".c@gmail.com')).toBe('"a@b"c@gmail.com');
+  });
+});
 
 const now = new Date('2026-08-17T09:00:00.000Z');
 const iso = (d: Date) => d.toISOString();

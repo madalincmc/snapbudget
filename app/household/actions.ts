@@ -6,6 +6,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { sendEmail, type SendResult } from '@/lib/email/send';
 import {
+  canonicalEmail,
   invitationEmail,
   invitationExpiry,
   invitationUrl,
@@ -89,7 +90,8 @@ export async function inviteMember(formData: FormData) {
     throw new Error('Doar proprietarul gospodăriei poate trimite invitații.');
   }
 
-  if (email === user.email?.toLowerCase()) {
+  // By mailbox, so writing your own address with dots does not get you past it.
+  if (user.email && canonicalEmail(email) === canonicalEmail(user.email)) {
     throw new Error('Nu te poți invita pe tine însuți.');
   }
 
@@ -287,7 +289,9 @@ export async function acceptInvitation(formData: FormData) {
   if (isExpired(invitation.expires_at)) {
     throw new Error('Invitația a expirat. Cere-i proprietarului să ți-o trimită din nou.');
   }
-  if (invitation.email.toLowerCase() !== user.email?.toLowerCase()) {
+  // The mailbox decides, not the spelling: Google reports whatever form the
+  // account was registered under, dots and all.
+  if (!user.email || canonicalEmail(invitation.email) !== canonicalEmail(user.email)) {
     throw new Error('Această invitație nu este pentru contul tău.');
   }
 
@@ -329,7 +333,7 @@ export async function declineInvitation(formData: FormData) {
     .from('household_invitations')
     .update({ status: 'declined', responded_at: new Date().toISOString() })
     .eq('id', invitationId)
-    .ilike('email', user.email ?? '');
+    .eq('email_canonical', canonicalEmail(user.email ?? ''));
 
   if (error) {
     throw new Error(error.message);

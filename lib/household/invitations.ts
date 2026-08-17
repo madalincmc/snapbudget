@@ -5,6 +5,31 @@
  * database or a mail relay behind it.
  */
 
+/**
+ * The mailbox an address actually reaches.
+ *
+ * Gmail ignores dots in the local part and everything from a "+" onwards, so
+ * three spellings of one inbox have to match one invitation. Everywhere else a
+ * dot is a significant character — stripping it would point an invitation at a
+ * different person — so only Google is treated this way.
+ *
+ * Mirrors `public.canonical_email` in the canonical_invitation_email migration.
+ * The two must agree: Postgres decides what RLS lets through, this decides what
+ * the app looks up, and a difference between them is an invitation that is
+ * visible but cannot be accepted.
+ */
+export function canonicalEmail(email: string): string {
+  const trimmed = email.trim().toLowerCase();
+  const at = trimmed.lastIndexOf('@');
+  if (at < 0) return trimmed;
+
+  const local = trimmed.slice(0, at);
+  const domain = trimmed.slice(at + 1);
+  if (domain !== 'gmail.com' && domain !== 'googlemail.com') return trimmed;
+
+  return `${local.split('+')[0].replace(/\./g, '')}@gmail.com`;
+}
+
 /** Matches the column default in the invitation_expiry migration. */
 export const INVITATION_TTL_DAYS = 7;
 
