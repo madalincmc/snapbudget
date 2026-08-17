@@ -76,7 +76,7 @@ export default async function BudgetsPage({
 
   // Budgets are always about the month in progress, so the period is `now`'s
   // month rather than anything the URL could select.
-  const { monthTotal, categoryTotals } = buildDashboardData(
+  const { total: monthTotal, categoryTotals } = buildDashboardData(
     (spendRows ?? []) as ReceiptRow[],
     monthKeyOf(now),
     now,

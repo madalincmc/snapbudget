@@ -13,12 +13,23 @@ import type { MonthKey } from '@/lib/dashboard/aggregate';
 export interface ViewParams {
   month?: MonthKey | null;
   who?: string | null;
+  /**
+   * A custom interval, when one is in view. Carried so a category opened from
+   * the breakdown describes the same days the breakdown was measured over —
+   * a link back to a month would quietly answer a different question.
+   */
+  from?: string | null;
+  to?: string | null;
 }
 
-function query({ month, who }: ViewParams): string {
+function query({ month, who, from, to }: ViewParams): string {
   const params = new URLSearchParams();
   if (month) params.set('month', month);
   if (who) params.set('who', who);
+  if (from && to) {
+    params.set('from', from);
+    params.set('to', to);
+  }
   const qs = params.toString();
   return qs ? `?${qs}` : '';
 }

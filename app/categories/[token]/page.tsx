@@ -1,22 +1,20 @@
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import {
-  buildDailyTrend,
-  dashboardRange,
-  isMonthKey,
   isSpent,
   monthKeyOf,
   receiptCategory,
   receiptDay,
-  receiptMonth,
+  trendOverDays,
   type ReceiptRow,
 } from '@/lib/dashboard/aggregate';
+import { periodFetchRange, periodFromParams } from '@/lib/dashboard/period';
 import { expensesBetween } from '@/lib/dashboard/query';
 import { categoryPath, dashboardPath } from '@/lib/dashboard/links';
 import { getHouseholdMembership, type HouseholdMemberInfo } from '@/lib/household/membership';
 import { categoryFromToken, CATEGORY_BAR_CLASS } from '@/lib/categories';
-import { money, monthKeyLabel } from '@/lib/dashboard/format';
-import { MonthPicker } from '@/components/month-picker';
+import { money, periodLabel } from '@/lib/dashboard/format';
+import { PeriodPicker } from '@/components/period-picker';
 import { PageHeader } from '@/components/page-header';
 import { SpendingTrendChart } from '@/components/spending-trend-chart';
 import { ReceiptsList } from '@/components/receipts-list';
@@ -37,7 +35,7 @@ export default async function CategoryPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ who?: string; month?: string }>;
+  searchParams: Promise<{ who?: string; month?: string; from?: string; to?: string }>;
 }) {
   const { token } = await params;
   const category = categoryFromToken(token);
@@ -45,7 +43,7 @@ export default async function CategoryPage({
     notFound();
   }
 
-  const { who, month: monthParam } = await searchParams;
+  const { who, month: monthParam, from: fromParam, to: toParam } = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -84,14 +82,17 @@ export default async function CategoryPage({
 
   const now = new Date();
   const currentMonth = monthKeyOf(now);
-  const month = isMonthKey(monthParam) && monthParam <= currentMonth ? monthParam : currentMonth;
-  const isCurrentMonth = month === currentMonth;
+
+  // The period the dashboard sent, resolved the same way it resolves it — this
+  // screen has to be measuring the days the breakdown row was measuring, or the
+  // share below would be a percentage of a different total.
+  const period = periodFromParams({ month: monthParam, from: fromParam, to: toParam }, now);
+  const isCurrentMonth = period.month === currentMonth;
 
   // The dashboard's window, not a narrower one. On the live month the chart is
   // a trailing 30 days that reaches back into the previous month, so the rows
-  // behind those columns have to be fetched too — and reusing the same range
-  // is what guarantees this chart and the dashboard's cover the same days.
-  const { from, to } = dashboardRange(month, now);
+  // behind those columns have to be fetched too.
+  const { from, to } = periodFetchRange(period);
 
   let rangeQuery = expensesBetween(supabase, from, to);
   const targetUserId = validWho === 'me' ? user.id : validWho;
@@ -104,7 +105,7 @@ export default async function CategoryPage({
 
   const inCategory = rows.filter((r) => receiptCategory(r) === category);
   const monthly = inCategory
-    .filter((r) => receiptMonth(r) === month)
+    .filter((r) => receiptDay(r) >= period.from && receiptDay(r) <= period.to)
     // Newest first, and created_at breaks the tie so several expenses sharing a
     // purchase_date keep a stable order instead of the one Postgres happened to
     // return them in.
@@ -115,27 +116,31 @@ export default async function CategoryPage({
 
   const total = monthly.reduce((sum, r) => sum + (r.amount ?? 0), 0);
   const monthTotal = rows
-    .filter((r) => receiptMonth(r) === month)
+    .filter((r) => receiptDay(r) >= period.from && receiptDay(r) <= period.to)
     .reduce((sum, r) => sum + (r.amount ?? 0), 0);
   const share = monthTotal > 0 ? Math.round((total / monthTotal) * 100) : 0;
 
-  const dailyTrend = buildDailyTrend(inCategory, month, now);
+  const dailyTrend = trendOverDays(inCategory, period.trendDays);
 
   // The current month is the default everywhere, so it stays out of the links.
-  const view = { month: isCurrentMonth ? null : month, who: validWho };
+  const view = {
+    month: isCurrentMonth ? null : period.month,
+    who: validWho,
+    ...(period.kind === 'custom' ? { from: period.from, to: period.to } : {}),
+  };
 
   return (
     <div className="pb-nav flex flex-1 justify-center px-4 pt-5">
       <div className="flex w-full max-w-lg flex-col gap-5">
         <PageHeader
           title={category}
-          description={`Cheltuielile din ${monthKeyLabel(month)}`}
+          description={`Cheltuielile din ${periodLabel(period)}`}
           backHref={dashboardPath(view)}
           backLabel="Înapoi la dashboard"
         />
 
         <div className="sb-fade -mt-1 flex justify-center" style={delay(40)}>
-          <MonthPicker month={month} currentMonth={currentMonth} />
+          <PeriodPicker period={period} currentMonth={currentMonth} />
         </div>
 
         <Card className="sb-rise [--card-spacing:--spacing(5)]" style={delay(80)}>
@@ -148,7 +153,7 @@ export default async function CategoryPage({
                 className={cn('h-2 w-2 flex-none rounded-full', CATEGORY_BAR_CLASS[category])}
                 aria-hidden
               />
-              Total {isCurrentMonth ? 'luna aceasta' : monthKeyLabel(month)}
+              Total {isCurrentMonth ? 'luna aceasta' : periodLabel(period)}
             </span>
             <p className="text-foreground text-3xl font-semibold tracking-tight tabular-nums">
               {money(total)}
@@ -166,7 +171,7 @@ export default async function CategoryPage({
 
         <Card className="sb-rise" style={delay(150)}>
           <CardContent>
-            <SpendingTrendChart data={dailyTrend} month={month} isCurrentMonth={isCurrentMonth} />
+            <SpendingTrendChart data={dailyTrend} period={period} />
           </CardContent>
         </Card>
 
@@ -176,8 +181,8 @@ export default async function CategoryPage({
               receipts={monthly}
               meUserId={user.id}
               creators={creators}
-              title={`Toate cheltuielile · ${monthKeyLabel(month)}`}
-              emptyLabel="Nicio cheltuială în această categorie luna aceasta."
+              title={`Toate cheltuielile · ${periodLabel(period)}`}
+              emptyLabel="Nicio cheltuială în această categorie în perioada aleasă."
               // The list is already everything there is for this category, so
               // there is no "see all" to offer.
               historyHref={null}

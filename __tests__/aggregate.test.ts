@@ -76,7 +76,7 @@ describe('buildDashboardData', () => {
       now,
     );
 
-    expect(data.monthTotal).toBe(150);
+    expect(data.total).toBe(150);
     expect(data.comparison.previousTotal).toBe(999);
   });
 
@@ -91,9 +91,9 @@ describe('buildDashboardData', () => {
       now,
     );
 
-    expect(data.monthTotal).toBe(40);
+    expect(data.total).toBe(40);
     expect(data.comparison.previousTotal).toBe(60);
-    expect(data.isCurrentMonth).toBe(false);
+    expect(data.isLive).toBe(false);
   });
 
   it('averages the current month over elapsed days, a past month over all of them', () => {
@@ -132,7 +132,7 @@ describe('buildDashboardData', () => {
       now,
     );
 
-    expect(data.monthTotal).toBe(25);
+    expect(data.total).toBe(25);
     expect(data.dailyTrend.find((d) => d.date === '2026-08-04')?.total).toBe(25);
   });
 
@@ -147,7 +147,7 @@ describe('buildDashboardData', () => {
       now,
     );
 
-    expect(data.monthTotal).toBe(100);
+    expect(data.total).toBe(100);
   });
 
   it('buckets an unknown category into Altele', () => {
@@ -164,7 +164,7 @@ describe('buildDashboardData', () => {
   it('reports an empty month as zero rather than NaN', () => {
     const data = buildDashboardData([], '2026-08', now);
 
-    expect(data.monthTotal).toBe(0);
+    expect(data.total).toBe(0);
     expect(data.avgDailySpend).toBe(0);
     expect(data.topCategory).toBeNull();
     expect(data.biggestExpense).toBeNull();
@@ -222,7 +222,7 @@ describe('buildDashboardData', () => {
       new Date(2026, 0, 20),
     );
 
-    expect(data.monthTotal).toBe(10);
+    expect(data.total).toBe(10);
     expect(data.comparison.previousTotal).toBe(20);
   });
 });

@@ -1,13 +1,12 @@
 import Link from 'next/link';
 import { ArrowRight, LogIn } from 'lucide-react';
 import {
-  buildDashboardData,
-  dashboardRange,
-  isMonthKey,
+  buildPeriodData,
   monthKeyOf,
   toDateString,
   type ReceiptRow,
 } from '@/lib/dashboard/aggregate';
+import { periodFetchRange, periodFromParams } from '@/lib/dashboard/period';
 import { buildBudgetOverview, scopeForView } from '@/lib/budgets';
 import {
   DEMO_HOUSEHOLD_BUDGETS,
@@ -17,7 +16,7 @@ import {
   DEMO_PERSONAL_BUDGETS,
   demoReceipts,
 } from '@/lib/demo/fixtures';
-import { MonthPicker } from '@/components/month-picker';
+import { PeriodPicker } from '@/components/period-picker';
 import { AppearanceMenu } from '@/components/appearance-menu';
 import { CategoryBreakdown } from '@/components/category-breakdown';
 import { MonthHeroCard } from '@/components/month-hero-card';
@@ -42,24 +41,23 @@ import { delay } from '@/lib/utils';
 export default async function DemoDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ who?: string; month?: string }>;
+  searchParams: Promise<{ who?: string; month?: string; from?: string; to?: string }>;
 }) {
-  const { who, month: monthParam } = await searchParams;
+  const { who, month: monthParam, from: fromParam, to: toParam } = await searchParams;
 
   const validWho = who === 'me' || (who && DEMO_MEMBERS.some((m) => m.userId === who)) ? who : null;
   const targetUserId = validWho === 'me' ? DEMO_ME : validWho;
 
   const now = new Date();
   const currentMonth = monthKeyOf(now);
-  const month = isMonthKey(monthParam) && monthParam <= currentMonth ? monthParam : currentMonth;
-  const isCurrentMonth = month === currentMonth;
+  const period = periodFromParams({ month: monthParam, from: fromParam, to: toParam }, now);
+  const isCurrentMonth = period.month === currentMonth;
 
   const all = demoReceipts(now);
   const mine = targetUserId ? all.filter((r) => r.user_id === targetUserId) : all;
 
-  // The same window the real page fetches: the month, the one before it for
-  // the comparison, and the trailing 30 days the chart needs on a live month.
-  const { from, to } = dashboardRange(month, now);
+  // The same window the real page fetches, resolved by the same code.
+  const { from, to } = periodFetchRange(period);
   const inRange = mine.filter((r: ReceiptRow) => {
     const day = r.purchase_date ?? r.created_at.slice(0, 10);
     return day >= toDateString(from) && day < toDateString(to);
@@ -74,8 +72,8 @@ export default async function DemoDashboardPage({
     biggestExpense,
     avgDailySpend,
     dailyTrend,
-    monthTotal,
-  } = buildDashboardData(inRange, month, now);
+    total: monthTotal,
+  } = buildPeriodData(inRange, period);
 
   const budgetScope = isCurrentMonth ? scopeForView(true, validWho ?? null) : null;
   const budgets =
@@ -120,7 +118,7 @@ export default async function DemoDashboardPage({
         </header>
 
         <div className="sb-fade -mt-1 flex justify-center" style={delay(40)}>
-          <MonthPicker month={month} currentMonth={currentMonth} />
+          <PeriodPicker period={period} currentMonth={currentMonth} />
         </div>
 
         <Card className="sb-rise [--card-spacing:--spacing(5)]" style={delay(80)}>
@@ -128,8 +126,7 @@ export default async function DemoDashboardPage({
             <MonthHeroCard
               comparison={comparison}
               avgDailySpend={avgDailySpend}
-              month={month}
-              isCurrentMonth={isCurrentMonth}
+              period={period}
               budget={budgetScope ? budgetOverview.overall : null}
             />
           </CardContent>
@@ -148,7 +145,7 @@ export default async function DemoDashboardPage({
 
         <Card className="sb-rise" style={delay(290)}>
           <CardContent>
-            <SpendingTrendChart data={dailyTrend} month={month} isCurrentMonth={isCurrentMonth} />
+            <SpendingTrendChart data={dailyTrend} period={period} />
           </CardContent>
         </Card>
 

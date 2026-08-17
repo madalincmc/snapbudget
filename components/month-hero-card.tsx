@@ -2,8 +2,8 @@ import type * as React from 'react';
 import Link from 'next/link';
 import { ArrowRight, Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { money, monthKeyLabel } from '@/lib/dashboard/format';
-import { shiftMonthKey, type MonthComparison, type MonthKey } from '@/lib/dashboard/aggregate';
+import { money, periodLabel, previousPeriodLabel } from '@/lib/dashboard/format';
+import type { DashboardPeriod, MonthComparison } from '@/lib/dashboard/aggregate';
 import { AnimatedNumber } from '@/components/animated-number';
 import { BudgetBar, BUDGET_TEXT_CLASS } from '@/components/budget-bar';
 import type { BudgetProgress } from '@/lib/budgets';
@@ -17,19 +17,17 @@ import type { BudgetProgress } from '@/lib/budgets';
 export function MonthHeroCard({
   comparison,
   avgDailySpend,
-  month,
-  isCurrentMonth,
+  period,
   budget,
 }: {
   comparison: MonthComparison;
   avgDailySpend: number;
-  month: MonthKey;
-  isCurrentMonth: boolean;
+  period: DashboardPeriod;
   /** The overall budget for this view, when one is set and the month is live. */
   budget?: BudgetProgress | null;
 }) {
   const { currentTotal, previousTotal, percentChange, hasPreviousData, direction } = comparison;
-  const previousLabel = monthKeyLabel(shiftMonthKey(month, -1));
+  const previousLabel = previousPeriodLabel(period);
 
   const projectedPercent =
     budget && budget.projected !== null && budget.budget.amount > 0
@@ -49,7 +47,7 @@ export function MonthHeroCard({
 
       <div className="relative flex flex-col gap-2">
         <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-          Cheltuit în {monthKeyLabel(month)}
+          Cheltuit în {periodLabel(period)}
         </p>
 
         {/* Proportional figures: tabular-nums pads every digit to the width of
@@ -82,7 +80,7 @@ export function MonthHeroCard({
             </span>
           ) : (
             <span className="text-muted-foreground text-xs">
-              {isCurrentMonth ? 'Prima lună — nimic de comparat' : 'Nimic în luna anterioară'}
+              {period.isLive ? 'Nimic de comparat încă' : `Nimic în ${previousLabel}`}
             </span>
           )}
 
@@ -134,7 +132,8 @@ export function MonthHeroCard({
           </p>
         </div>
       ) : (
-        isCurrentMonth && (
+        period.month !== null &&
+        period.isLive && (
           <Link
             href="/budgets"
             className="text-muted-foreground hover:text-primary border-border/70 group/set relative inline-flex items-center gap-1.5 border-t pt-4 text-xs font-medium transition-colors"
