@@ -6,6 +6,10 @@
 
 Track spending by photographing receipts — no manual entry. Snap a photo, OCR pulls out the merchant, amount and date, and the spend categorizes itself. Cash goes in by hand, rent adds itself on a schedule, and a whole household pools into one set of totals.
 
+### [**snapbudget.space**](https://snapbudget.space)
+
+[Try the demo](https://snapbudget.space/demo) — invented data, no account, nothing to sign up for.
+
 <!-- prettier-ignore -->
 [![CI](https://github.com/madalincmc/snapbudget/actions/workflows/ci.yml/badge.svg)](https://github.com/madalincmc/snapbudget/actions/workflows/ci.yml) [![Next.js 16](https://img.shields.io/badge/Next.js-16-000?logo=nextdotjs&logoColor=white)](https://nextjs.org) [![React 19](https://img.shields.io/badge/React-19-087ea4?logo=react&logoColor=white)](https://react.dev) [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org) [![Tailwind v4](https://img.shields.io/badge/Tailwind-v4-38bdf8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com) [![Supabase](https://img.shields.io/badge/Supabase-RLS-3ecf8e?logo=supabase&logoColor=white)](https://supabase.com) [![Vercel](https://img.shields.io/badge/Vercel-deployed-000?logo=vercel&logoColor=white)](https://vercel.com)
 
@@ -293,9 +297,22 @@ npx dotenv -e .env.local -- node scripts/test-analytics-flow.mjs    # monthly_sp
 
 ## Deployment
 
-The app is deployed to [Vercel](https://vercel.com), connected to this repository. Every pull request gets a preview deployment; merges to `main` deploy to production.
+Production is **[snapbudget.space](https://snapbudget.space)**, on [Vercel](https://vercel.com) and
+connected to this repository. Every pull request gets a preview deployment; merges to `main` deploy
+to production. The apex redirects to `www`, which is the canonical host.
 
 Environment variables must be configured in the Vercel project settings (Production, Preview, and Development) to match `.env.example`.
+
+> [!IMPORTANT]
+> Preview deployments share the **production** database — they are not an isolated environment.
+> Anything written while testing a pull request is written for real.
+
+> [!NOTE]
+> The host appears outside this repo as well, and nothing here checks that the copies agree:
+> Supabase Auth's Site URL and redirect allow-list, `NEXT_PUBLIC_SITE_URL`, and the Resend sending
+> domain. Changing the domain without updating all of them fails quietly — an unlisted redirect
+> sends sign-ins back to the old host, and a missing site URL creates invitations that send no
+> email.
 
 ## Supabase setup
 
