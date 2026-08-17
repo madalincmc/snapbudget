@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { detectText } from '@/lib/ocr/vision';
-import { parseReceiptText } from '@/lib/ocr/parse-receipt';
-import { categorizeMerchant } from '@/lib/categorization/categorize';
+import { scanReceipt } from '@/lib/ocr/scan';
 
+/**
+ * Reads a receipt that already exists and commits what it finds to the row.
+ *
+ * Used by the batch screen, which has no review step to hold the reading
+ * against. The single-receipt screen goes through `/api/receipts/scan`
+ * instead, which reads the same image and saves nothing.
+ */
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -25,19 +30,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'not_found' }, { status: 404 });
   }
 
-  const { data: file, error: downloadError } = await supabase.storage
-    .from('receipts')
-    .download(receipt.storage_path);
-
-  if (downloadError || !file) {
-    return NextResponse.json({ error: 'download_failed' }, { status: 500 });
-  }
-
   try {
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const text = await detectText(buffer.toString('base64'));
-    const parsed = parseReceiptText(text);
-    const { category, subcategory } = categorizeMerchant(parsed.merchant);
+    const parsed = await scanReceipt(supabase, receipt.storage_path);
+    const { category, subcategory } = parsed;
     const status = parsed.amount !== null ? 'processed' : 'failed';
 
     const { error: updateError } = await supabase

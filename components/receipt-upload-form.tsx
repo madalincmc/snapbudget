@@ -35,7 +35,14 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [result, setResult] = useState<OcrResult | null>(null);
-  const [receiptId, setReceiptId] = useState<string | null>(null);
+  /**
+   * The uploaded image, waiting to be claimed by a receipt.
+   *
+   * Held rather than turned into a row straight away: the reader has not
+   * agreed to this expense yet. Cleared once a save has taken it, so what is
+   * left here is always an image nothing points at.
+   */
+  const [uploadedPath, setUploadedPath] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -73,34 +80,20 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
       return;
     }
 
-    const { data: membership } = await supabase
-      .from('household_members')
-      .select('household_id')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    const { data: inserted, error: insertError } = await supabase
-      .from('receipts')
-      .insert({
-        user_id: userId,
-        household_id: membership?.household_id ?? null,
-        storage_path: path,
-        status: 'pending',
-      })
-      .select('id')
-      .single();
-
-    if (insertError || !inserted) {
-      setStatus('error');
-      setError(insertError?.message ?? 'Nu am putut salva bonul.');
-      return;
-    }
-
+    setUploadedPath(path);
     setStatus('processing');
 
+    // Read only. The expense does not exist until the reader has seen these
+    // figures and accepted them — before, the row was written here and the
+    // OCR reading committed to it, so walking away from the review screen
+    // still left a receipt on the dashboard nobody had agreed to.
     let data: OcrResult | null = null;
     try {
-      const response = await fetch(`/api/receipts/${inserted.id}/process`, { method: 'POST' });
+      const response = await fetch('/api/receipts/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path }),
+      });
       const json = await response.json();
       if (response.ok) {
         data = json;
@@ -109,17 +102,23 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
       // OCR failed silently — the user can still fill in the fields below by hand.
     }
 
-    setReceiptId(inserted.id);
     setResult(data);
     setStatus('reviewing');
   }
 
   function reset() {
+    // Nothing claimed this image, so it goes with the screen. Best effort:
+    // a closed tab leaves it behind, which costs a file nothing points at
+    // rather than an expense that counts.
+    if (uploadedPath) {
+      void createClient().storage.from('receipts').remove([uploadedPath]);
+    }
+
     setStatus('idle');
     setError(null);
     setPreview(null);
     setResult(null);
-    setReceiptId(null);
+    setUploadedPath(null);
     setSaving(false);
     if (cameraInputRef.current) cameraInputRef.current.value = '';
     if (galleryInputRef.current) galleryInputRef.current.value = '';
@@ -127,7 +126,7 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
 
   async function handleReviewSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!receiptId) return;
+    if (!uploadedPath) return;
 
     const formData = new FormData(event.currentTarget);
     const merchant = String(formData.get('merchant') ?? '').trim() || null;
@@ -150,27 +149,37 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
     setSaving(true);
     setError(null);
 
+    // This is where the expense comes into being — on the reader saying so,
+    // not on the scan finishing.
     const supabase = createClient();
-    const { error: updateError } = await supabase
-      .from('receipts')
-      .update({
-        merchant,
-        amount,
-        purchase_date: purchaseDate,
-        category,
-        subcategory,
-        status: amount !== null ? 'processed' : 'pending',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', receiptId);
+    const { data: membership } = await supabase
+      .from('household_members')
+      .select('household_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const { error: insertError } = await supabase.from('receipts').insert({
+      user_id: userId,
+      household_id: membership?.household_id ?? null,
+      storage_path: uploadedPath,
+      merchant,
+      amount,
+      purchase_date: purchaseDate,
+      category,
+      subcategory,
+      status: amount !== null ? 'processed' : 'pending',
+    });
 
     setSaving(false);
 
-    if (updateError) {
-      setError(updateError.message);
+    if (insertError) {
+      setError(insertError.message);
       return;
     }
 
+    // The image belongs to a receipt now, so it is no longer this screen's to
+    // clean up when it resets.
+    setUploadedPath(null);
     setResult({ merchant, amount, purchaseDate, category, subcategory });
     setStatus('success');
   }
