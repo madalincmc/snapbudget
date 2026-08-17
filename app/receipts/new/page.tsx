@@ -35,6 +35,12 @@ export default async function NewReceiptPage() {
       </div>
 
       <div className="sb-fade flex flex-col items-center gap-1" style={delay(200)}>
+        {/* A pile saved up over a week goes through the batch screen instead:
+            answering this screen's review step once per photo is the thing
+            that makes backfilling not worth starting. */}
+        <Button variant="link" nativeButton={false} render={<Link href="/receipts/bulk" />}>
+          Ai mai multe bonuri? Încarcă-le pe toate
+        </Button>
         {/* The bottom-nav button goes straight to scanning, so cash and other
             receipt-less spending needs a visible way out from here. */}
         <Button variant="link" nativeButton={false} render={<Link href="/expenses/new" />}>

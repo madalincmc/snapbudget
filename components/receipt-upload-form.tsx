@@ -9,6 +9,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CategoryPicker } from '@/components/category-picker';
+// Shared with the batch screen so the two flows cannot end up accepting
+// different files.
+import { ALLOWED_TYPES, MAX_FILE_SIZE } from '@/lib/receipts/upload';
 import {
   CATEGORIES,
   CATEGORY_BADGE_CLASS,
@@ -16,9 +19,6 @@ import {
   isSubcategoryOf,
   type Category,
 } from '@/lib/categories';
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 
 type Status = 'idle' | 'uploading' | 'processing' | 'reviewing' | 'success' | 'error';
 
