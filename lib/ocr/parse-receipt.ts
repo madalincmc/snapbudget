@@ -1,7 +1,17 @@
 import { matchKnownMerchant } from './merchants';
 
-/** A money figure with decimals: 153,00 · 393.46 · 1.234,56 */
-const AMOUNT = String.raw`\d{1,3}(?:[.,]\d{3})*[.,]\d{2}`;
+/**
+ * A money figure with decimals: 153,00 · 393.46 · 1.234,56
+ *
+ * Never one carrying a percent sign. A VAT rate is printed in the same column
+ * and the same format as the sums around it — "TVA A 21,00%" — so without the
+ * lookahead it reads as 21,00, and on a small receipt it is the largest figure
+ * on the slip.
+ */
+const RATE_SUFFIX = String.raw`(?!\s*%)`;
+const AMOUNT = String.raw`\d{1,3}(?:[.,]\d{3})*[.,]\d{2}${RATE_SUFFIX}`;
+/** A rate, for stripping one out of a line before judging what the line is. */
+const RATE = /\d[\d.,]*\s*%/g;
 const AMOUNT_GLOBAL = new RegExp(AMOUNT, 'g');
 /** The whole line is one figure, give or take a currency mark or a VAT letter. */
 const AMOUNT_ONLY = new RegExp(String.raw`^\W{0,3}(${AMOUNT})\s*[A-EȘ]?\.?$`);
@@ -202,11 +212,16 @@ function pairedFigure(lines: string[], labelIndex: number): number | null {
  * A label carries no digits at all, or ends in a colon. Requiring that keeps
  * product lines ("EFIX S BENZINA 98 - POMPA 1") out of the run, which would
  * otherwise shift every offset below them by one.
+ *
+ * A rate does not count as digits: "TVA A 21,00%" names its row rather than
+ * being a figure in it. Counted, it ended the run of labels one line early, so
+ * the TOTAL above it paired with nothing and the whole labelled read came back
+ * empty — leaving the largest-figure fallback to answer with the rate itself.
  */
 function isLabelLine(line: string): boolean {
   if (amountOnly(line) !== null) return false;
   if (!/\p{L}/u.test(line)) return false;
-  return !/\d/.test(line) || line.endsWith(':');
+  return !/\d/.test(line.replace(RATE, '')) || line.endsWith(':');
 }
 
 function amountOnly(line: string): number | null {

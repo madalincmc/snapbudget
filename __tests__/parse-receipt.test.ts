@@ -81,6 +81,41 @@ CARD
 27.93
 `;
 
+/**
+ * MAD-72. One item, and a VAT rate printed as a figure: "TVA A 21,00%".
+ *
+ * The rate row is what breaks it. It carries digits without ending in a colon,
+ * so it is not read as a label and it is not a figure either — the run of
+ * labels stops dead there, "TOTAL" is left paired with nothing, and the parser
+ * falls through to "largest number in the text". Which is the 21 from the VAT
+ * rate, not the 15,99 anyone can see on the slip.
+ */
+const LIDL_RECEIPT = `
+S.C. LIDL DISCOUNT S.R.L.
+Strada Cosmonautilor 2
+430053 Baia Mare
+Cod Fiscal C.I.F.: 22891860
+Lei
+1,000 BUC x 15,99
+Inghetata cornet Trio
+15,99 A
+Subtotal
+TOTAL
+TOTAL TVA
+TVA A 21,00%
+CARD
+15,99
+15,99
+2,78
+2,78
+15,99
+TRANZACTIE CARD ***********9990
+Casa:84
+DATA:02/08/2026
+ORA:12-47-36
+BON FISCAL
+`;
+
 /** No known brand — the company suffix has to carry it. */
 const INDEPENDENT_SHOP = `
 BON FISCAL
@@ -191,6 +226,30 @@ describe('amount', () => {
 
   it('falls back to the largest figure when nothing is labelled', () => {
     expect(parseReceiptText('12,00\n45,00\n7,50').amount).toBe(45);
+  });
+
+  it('takes the printed TOTAL, not the VAT rate standing next to it (MAD-72)', () => {
+    // Was 21 — the "21,00" out of "TVA A 21,00%", picked up as the largest
+    // figure once the labelled read came back empty.
+    expect(parseReceiptText(LIDL_RECEIPT).amount).toBe(15.99);
+  });
+
+  it('never reads a percentage as money', () => {
+    // Both paths: the labelled one, and the largest-figure fallback behind it.
+    expect(parseReceiptText('TVA A 21,00%\nTOTAL\n15,99').amount).toBe(15.99);
+    expect(parseReceiptText('TVA 19,00%\n8,40').amount).toBe(8.4);
+  });
+
+  it('keeps counting labels across a VAT rate row', () => {
+    // The rate carries digits but is still a label, and dropping it out of the
+    // run shifted every figure below it by one.
+    const text = 'Subtotal\nTOTAL\nTVA A 21,00%\n15,99\n15,99\n2,78';
+    expect(parseReceiptText(text).amount).toBe(15.99);
+  });
+
+  it('reads a Romanian decimal comma as a decimal, not a thousands mark', () => {
+    expect(parseReceiptText('TOTAL 15,99').amount).toBe(15.99);
+    expect(parseReceiptText('TOTAL 0,99').amount).toBe(0.99);
   });
 
   it('reports nothing when there are no figures at all', () => {
