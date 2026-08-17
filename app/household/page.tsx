@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
-import { Crown, Mail, X } from 'lucide-react';
+import { Crown, Mail, Send, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { daysLeft, isExpired } from '@/lib/household/invitations';
 import { delay } from '@/lib/utils';
 import { isMonthKey, monthKeyOf, monthKeyToDate, type ReceiptRow } from '@/lib/dashboard/aggregate';
 import { expensesBetween } from '@/lib/dashboard/query';
@@ -29,16 +31,33 @@ import {
   createHousehold,
   inviteMember,
   cancelInvitation,
+  resendInvitation,
   removeMember,
   leaveHousehold,
 } from './actions';
 
+/**
+ * What the redirect from an invite or resend reports back.
+ *
+ * The invitation is written either way; these describe only whether the email
+ * about it left the building.
+ */
+const INVITE_NOTICE: Record<string, string> = {
+  sent: 'Invitația a fost trimisă pe email.',
+  resent: 'Invitația a fost trimisă din nou.',
+  not_configured:
+    'Invitația a fost creată, dar trimiterea de emailuri nu e configurată — trimite-i linkul manual.',
+  rejected:
+    'Invitația a fost creată, dar emailul a fost respins. Verifică adresa și încearcă să retrimiți.',
+  unreachable: 'Invitația a fost creată, dar emailul nu a putut fi trimis. Încearcă să retrimiți.',
+};
+
 export default async function HouseholdPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; invite?: string }>;
 }) {
-  const { month: monthParam } = await searchParams;
+  const { month: monthParam, invite: inviteStatus } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -145,7 +164,7 @@ export default async function HouseholdPage({
   const { data: invitations } = isOwner
     ? await supabase
         .from('household_invitations')
-        .select('id, email, created_at')
+        .select('id, email, created_at, expires_at')
         .eq('household_id', membership.household_id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
@@ -276,6 +295,21 @@ export default async function HouseholdPage({
               </p>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
+              {/* Whether the email actually went out. The invitation exists
+                  regardless, so this reports rather than blocks — and the
+                  resend button below is the way to try again. */}
+              {inviteStatus && (
+                <Alert
+                  variant={
+                    inviteStatus === 'sent' || inviteStatus === 'resent' ? 'default' : 'destructive'
+                  }
+                >
+                  <AlertDescription>
+                    {INVITE_NOTICE[inviteStatus] ?? INVITE_NOTICE.unreachable}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <form action={inviteMember} className="flex flex-col gap-3 sm:flex-row sm:items-end">
                 <div className="flex flex-1 flex-col gap-1.5">
                   <Label htmlFor="email">Email</Label>
@@ -300,7 +334,22 @@ export default async function HouseholdPage({
                       <span className="text-foreground min-w-0 flex-1 truncate text-sm">
                         {inv.email}
                       </span>
-                      <Badge variant="outline">În așteptare</Badge>
+                      <Badge variant="outline">
+                        {isExpired(inv.expires_at)
+                          ? 'Expirată'
+                          : `${daysLeft(inv.expires_at)} zile`}
+                      </Badge>
+                      <form action={resendInvitation.bind(null, inv.id)}>
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="icon-sm"
+                          className="text-muted-foreground"
+                        >
+                          <Send />
+                          <span className="sr-only">Retrimite invitația</span>
+                        </Button>
+                      </form>
                       <form action={cancelInvitation.bind(null, inv.id)}>
                         <Button
                           type="submit"

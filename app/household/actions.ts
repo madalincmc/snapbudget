@@ -2,7 +2,15 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
+import { sendEmail, type SendResult } from '@/lib/email/send';
+import {
+  invitationEmail,
+  invitationExpiry,
+  invitationUrl,
+  isExpired,
+} from '@/lib/household/invitations';
 
 async function requireUser() {
   const supabase = await createClient();
@@ -85,21 +93,123 @@ export async function inviteMember(formData: FormData) {
     throw new Error('Nu te poți invita pe tine însuți.');
   }
 
-  const { error } = await supabase.from('household_invitations').insert({
-    household_id: membership.household_id,
-    email,
-    invited_by: user.id,
-  });
+  const { data: invitation, error } = await supabase
+    .from('household_invitations')
+    .insert({
+      household_id: membership.household_id,
+      email,
+      invited_by: user.id,
+      expires_at: invitationExpiry().toISOString(),
+    })
+    .select('id, expires_at')
+    .single();
 
-  if (error) {
+  if (error || !invitation) {
     throw new Error(
-      error.code === '23505'
+      error?.code === '23505'
         ? 'Această persoană are deja o invitație în așteptare.'
-        : error.message,
+        : (error?.message ?? 'Nu am putut crea invitația.'),
     );
   }
 
+  // The invitation exists either way. A mail outage is not a reason to undo it
+  // — the owner can send it again from the household screen — so the result is
+  // reported rather than thrown.
+  const delivery = await deliverInvitation(supabase, {
+    invitationId: invitation.id,
+    email,
+    householdId: membership.household_id,
+    expiresAt: invitation.expires_at,
+    inviter: user,
+  });
+
   revalidatePath('/household');
+  redirect(`/household?invite=${delivery.sent ? 'sent' : delivery.reason}`);
+}
+
+/**
+ * Builds and sends the invitation email.
+ *
+ * Never throws: the caller has already written a row, and losing the
+ * invitation because the relay was down would be the wrong trade.
+ */
+async function deliverInvitation(
+  supabase: SupabaseClient,
+  params: {
+    invitationId: string;
+    email: string;
+    householdId: string;
+    expiresAt: string;
+    inviter: { user_metadata: Record<string, unknown>; email?: string };
+  },
+): Promise<SendResult> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (!siteUrl) return { sent: false, reason: 'not_configured' };
+
+  const { data: household } = await supabase
+    .from('households')
+    .select('name')
+    .eq('id', params.householdId)
+    .maybeSingle();
+
+  const inviterName =
+    (params.inviter.user_metadata.full_name as string | undefined) ??
+    params.inviter.email ??
+    'Cineva';
+
+  const body = invitationEmail({
+    inviterName,
+    householdName: household?.name ?? 'gospodăria',
+    url: invitationUrl(siteUrl, params.invitationId),
+    expiresAt: params.expiresAt,
+  });
+
+  return sendEmail({ to: params.email, replyTo: params.inviter.email, ...body });
+}
+
+/**
+ * Sends a pending invitation again.
+ *
+ * Extends the existing row rather than writing a second one — a new row would
+ * either collide with the pending-unique index or, worse, leave two live links
+ * to the same household. Nothing about membership changes here.
+ */
+export async function resendInvitation(invitationId: string) {
+  const { supabase, user } = await requireUser();
+
+  const { data: membership } = await supabase
+    .from('household_members')
+    .select('household_id, role')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (!membership || membership.role !== 'owner') {
+    throw new Error('Doar proprietarul gospodăriei poate retrimite invitații.');
+  }
+
+  const { data: invitation, error } = await supabase
+    .from('household_invitations')
+    .update({ expires_at: invitationExpiry().toISOString() })
+    .eq('id', invitationId)
+    .eq('household_id', membership.household_id)
+    .eq('status', 'pending')
+    .select('id, email, expires_at')
+    .maybeSingle();
+
+  if (error || !invitation) {
+    throw new Error('Invitația nu mai este în așteptare.');
+  }
+
+  const delivery = await deliverInvitation(supabase, {
+    invitationId: invitation.id,
+    email: invitation.email,
+    householdId: membership.household_id,
+    expiresAt: invitation.expires_at,
+    inviter: user,
+  });
+
+  revalidatePath('/household');
+  redirect(`/household?invite=${delivery.sent ? 'resent' : delivery.reason}`);
 }
 
 export async function cancelInvitation(invitationId: string) {
@@ -165,12 +275,17 @@ export async function acceptInvitation(formData: FormData) {
 
   const { data: invitation, error: invitationError } = await supabase
     .from('household_invitations')
-    .select('id, household_id, status, email')
+    .select('id, household_id, status, email, expires_at')
     .eq('id', invitationId)
     .maybeSingle();
 
   if (invitationError || !invitation || invitation.status !== 'pending') {
     throw new Error('Invitația nu mai este valabilă.');
+  }
+  // Checked here rather than trusted from the link: the row is what decides,
+  // and the owner can make it live again by sending it a second time.
+  if (isExpired(invitation.expires_at)) {
+    throw new Error('Invitația a expirat. Cere-i proprietarului să ți-o trimită din nou.');
   }
   if (invitation.email.toLowerCase() !== user.email?.toLowerCase()) {
     throw new Error('Această invitație nu este pentru contul tău.');
