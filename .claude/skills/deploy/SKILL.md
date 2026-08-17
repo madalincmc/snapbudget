@@ -119,6 +119,36 @@ gh api "repos/madalincmc/snapbudget/deployments?per_page=5" --jq '.[] | {sha: .s
 arbitrary class silently produces no CSS and the declaration is simply absent. After a
 Tailwind-only change, grep the built stylesheet for the rule before believing it shipped.
 
+## Changing the domain the app is served on
+
+The host lives in four places outside the repo. Nothing in CI, the build, or `npm test` checks that
+they agree, and each one fails differently and quietly. Production is currently
+**`https://www.snapbudget.space`** — the apex 308s to `www`, so `www` is the canonical host.
+
+**1. Supabase Auth → URL Configuration.** Site URL, and the Redirect URLs allow-list.
+
+The failure is deceptive: Supabase rejects a `redirectTo` that is not allow-listed and silently
+falls back to the Site URL, so signing in from the new domain drops the reader on the *old* host's
+login page. It reads as "the button did nothing, I had to press it twice" — because the second
+press happens on a host that is allow-listed. Keep the old `*.vercel.app` entry alongside the new
+one, or preview deployments stop being able to sign in.
+
+**2. `NEXT_PUBLIC_SITE_URL`** in Vercel. Invitation links are built from it, and `deliverInvitation`
+returns `not_configured` when it is missing — invitations are then created with no email sent and
+no error raised. Being `NEXT_PUBLIC_`, it is baked at build time: **setting it is not enough,
+redeploy after.**
+
+**3. The Resend sending domain.** DKIM on the root, SPF and MX on `send`, plus a `_dmarc` TXT.
+`EMAIL_FROM` must be on a verified domain or mail fails SPF and is junked. A `*.vercel.app` host can
+never be used here — you cannot add DNS records to a domain you do not own.
+
+**4. Google OAuth** in the Google Cloud console, if the redirect ever stops going through
+Supabase's own callback. It does not today, so this is usually nothing — but check it before
+concluding the problem is elsewhere.
+
+After changing any of them, verify by *doing the thing*, not by reading config: press the sign-in
+button on the new host and confirm you land on that same host's dashboard.
+
 ## Environment notes
 
 - The permission classifier in this harness sometimes blocks `gh pr merge` and `vercel --prod`.
