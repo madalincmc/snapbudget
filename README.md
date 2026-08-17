@@ -6,6 +6,10 @@
 
 Track spending by photographing receipts — no manual entry. Snap a photo, OCR pulls out the merchant, amount and date, and the spend categorizes itself. Cash goes in by hand, rent adds itself on a schedule, and a whole household pools into one set of totals.
 
+### [**snapbudget.space**](https://snapbudget.space)
+
+[Try the demo](https://snapbudget.space/demo) — invented data, no account, nothing to sign up for.
+
 <!-- prettier-ignore -->
 [![CI](https://github.com/madalincmc/snapbudget/actions/workflows/ci.yml/badge.svg)](https://github.com/madalincmc/snapbudget/actions/workflows/ci.yml) [![Next.js 16](https://img.shields.io/badge/Next.js-16-000?logo=nextdotjs&logoColor=white)](https://nextjs.org) [![React 19](https://img.shields.io/badge/React-19-087ea4?logo=react&logoColor=white)](https://react.dev) [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org) [![Tailwind v4](https://img.shields.io/badge/Tailwind-v4-38bdf8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com) [![Supabase](https://img.shields.io/badge/Supabase-RLS-3ecf8e?logo=supabase&logoColor=white)](https://supabase.com) [![Vercel](https://img.shields.io/badge/Vercel-deployed-000?logo=vercel&logoColor=white)](https://vercel.com)
 
@@ -105,16 +109,17 @@ would break what you already learned.
 
 ## Features
 
-- **Receipt scanning** — photograph or upload a receipt; Google Vision OCR extracts merchant, amount, and date, and the spend is auto-categorized. The extraction is editable before it's saved.
+- **Receipt scanning** — photograph or upload a receipt; Google Vision OCR extracts merchant, amount, and date, and the spend is auto-categorized. Nothing is written until you accept the figures, so backing out of the review leaves no expense behind.
+- **Bulk upload** — a week's worth of receipts in one go: pick up to 20 photos, watch each one's status, and retry any that fail. Three run at a time, so a slow receipt doesn't hold up the rest. There's no review step here — that's the trade for not answering one per photo — and anything OCR couldn't price is flagged with a link straight to it.
 - **Manual expenses** — log cash, parking, and other receipt-less spending directly.
 - **Recurring expenses** — rent, subscriptions, utilities and insurance are added automatically on a weekly, monthly or yearly schedule; pause, resume, edit or delete a rule at any time. Generated rows are ordinary expenses, so they flow into the dashboard, charts and history unchanged.
-- **Household sharing** — create a household and invite others by email. Everyone contributes from their own account and sees the combined totals, and the dashboard can be filtered to one member or just yourself. Owners can cancel invitations and remove members; members can leave. Access is enforced by Postgres row-level security, not just in the UI.
+- **Household sharing** — create a household and invite others by email. The invitation is actually emailed, naming the inviter and linking to a page that works signed out: through Google and back to the same invitation. Links expire after seven days and can be re-sent. Everyone contributes from their own account and sees the combined totals, and the dashboard can be filtered to one member or just yourself. Owners can cancel invitations and remove members; members can leave. Access is enforced by Postgres row-level security, not just in the UI.
 - **Budgets** — a monthly limit on the total and/or per category. The dashboard shows how much is used, what's left, and where the month lands at the current pace, so going over is visible days before it happens rather than after. In a household the budget can cover everyone's pooled spending or just your own; which one you see follows the same member filter as the rest of the dashboard.
-- **Dashboard insights** — current vs. previous month comparison, average daily spend, top category, biggest expense, and a 30-day spending chart that shades the current month apart from the previous one. Any past month can be selected, and the whole dashboard re-scopes to it.
+- **Dashboard insights** — current vs. previous period comparison, average daily spend, top category, biggest expense, and a 30-day spending chart that shades the current month apart from the previous one. Any past month can be selected, or an arbitrary interval — a fortnight away, the run-up to Christmas — and every figure on the screen re-scopes to it together, compared against the stretch of equal length immediately before.
 - **Charts** — the daily and monthly plots share one column chart: hairline gridlines, a dashed average reference line, a direct label on the peak, and hover or arrow-key readout of any column. Category spending gets a stacked composition bar above the ranked list, with the two cross-highlighting each other.
 - **12-month analysis** — totals per month against the average, the calendar-year total, and a per-category trend showing which categories are creeping up.
 - **Category breakdown** — spending by category for the current month, with a searchable category/subcategory picker when logging an expense.
-- **History** — search, filter (category, month), and sort every expense, receipt or manual.
+- **History** — search, filter and sort every expense, receipt or manual. The date filter takes named periods (this month, last 7 days, this year) or an interval you draw yourself, and the period survives searching, sorting, and opening an expense and coming back.
 - **Themes and colour palettes** — an appearance menu with two independent choices: the theme (automatic / light / dark) and one of four palettes. Automatic follows the operating system and keeps following it while the app is open, and both choices survive a reload.
 - **Google sign-in** — auth via Supabase, no separate SnapBudget password.
 
@@ -128,6 +133,7 @@ would break what you already learned.
 | **Backend**    | Supabase — Postgres, Auth, Storage — with row-level security on **every** table                                     |
 | **Scheduling** | `pg_cron` inside Postgres: a nightly sweep mints due recurring expenses, so no service-role key is needed to run it |
 | **OCR**        | Google Vision API                                                                                                   |
+| **Email**      | Resend — household invitations; the send sits behind one module, so the relay is swappable                          |
 | **Payments**   | Stripe — env vars are scaffolded (see below), but billing isn't wired into the product yet                          |
 | **Hosting**    | Vercel — preview per PR, production on merge to `main`                                                              |
 
@@ -146,8 +152,8 @@ serverless function to be added up there.
 <summary><b>Access is enforced by RLS, not by the UI</b></summary>
 
 Household visibility, budget scoping and every read path go through row-level security
-policies. The UI filters are a convenience on top; removing them wouldn't leak a row. Four
-end-to-end scripts (81 checks) exercise those policies against a real project — see
+policies. The UI filters are a convenience on top; removing them wouldn't leak a row. Five
+end-to-end scripts (113 checks) exercise those policies against a real project — see
 [Testing](#testing).
 
 </details>
@@ -191,8 +197,8 @@ are reachable with the arrow keys. All motion is switched off wholesale under
 app/                  # App Router routes (dashboard, history, household, recurring, budgets, analytics, receipts)
 app/globals.css       # Design tokens: the four palettes, category + status colours, motion primitives
 components/           # UI components — shadcn/ui primitives in components/ui, plots in components/charts
-lib/                  # Supabase clients, OCR, categorization, dashboard aggregation, theme
-__tests__/            # Vitest unit tests for the pure date/money logic
+lib/                  # Supabase clients, OCR, categorization, dashboard aggregation, email, theme
+__tests__/            # Vitest unit tests for the pure date/money/parsing logic
 supabase/migrations/  # SQL: schema, RLS policies, pg_cron job, aggregate RPC
 scripts/              # Migration runner and end-to-end RLS/recurring checks
 types/                # Shared TypeScript types
@@ -226,18 +232,19 @@ cp .env.example .env.local
 <details>
 <summary><b>What each variable is for</b></summary>
 
-| Variable                                                   | Description                                                                                       |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_SITE_URL`                                     | Base URL of the app (`http://localhost:3000` locally)                                             |
-| `NEXT_PUBLIC_SUPABASE_URL`                                 | Supabase project URL                                                                              |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`                            | Supabase anon/public key                                                                          |
-| `SUPABASE_SERVICE_ROLE_KEY`                                | Supabase service role key (server-side only, never expose to the client)                          |
-| `POSTGRES_URL_NON_POOLING`                                 | Direct (non-pooled) Postgres connection string, used by `npm run db:migrate` and the test scripts |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`                | Google OAuth credentials, wired into Supabase Auth's Google provider                              |
-| `GOOGLE_VISION_CREDENTIALS_BASE64`                         | Base64-encoded Google Cloud service account JSON, used for receipt OCR                            |
-| `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe API keys                                                                                   |
-| `STRIPE_WEBHOOK_SECRET`                                    | Signing secret for the Stripe webhook endpoint                                                    |
-| `STRIPE_PRICE_ID`                                          | Price ID for the SnapBudget subscription plan                                                     |
+| Variable                                                   | Description                                                                                                         |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SITE_URL`                                     | Base URL of the app (`http://localhost:3000` locally)                                                               |
+| `NEXT_PUBLIC_SUPABASE_URL`                                 | Supabase project URL                                                                                                |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`                            | Supabase anon/public key                                                                                            |
+| `SUPABASE_SERVICE_ROLE_KEY`                                | Supabase service role key (server-side only, never expose to the client)                                            |
+| `POSTGRES_URL_NON_POOLING`                                 | Direct (non-pooled) Postgres connection string, used by `npm run db:migrate` and the test scripts                   |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`                | Google OAuth credentials, wired into Supabase Auth's Google provider                                                |
+| `GOOGLE_VISION_CREDENTIALS_BASE64`                         | Base64-encoded Google Cloud service account JSON, used for receipt OCR                                              |
+| `RESEND_API_KEY` / `EMAIL_FROM`                            | Invitation email. Leave unset and invitations are still created — only the email is skipped, and the screen says so |
+| `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe API keys                                                                                                     |
+| `STRIPE_WEBHOOK_SECRET`                                    | Signing secret for the Stripe webhook endpoint                                                                      |
+| `STRIPE_PRICE_ID`                                          | Price ID for the SnapBudget subscription plan                                                                       |
 
 </details>
 
@@ -272,18 +279,22 @@ npm run db:migrate <f>  # Apply a single SQL migration
 
 ## Testing
 
-**`npm test`** covers the pure logic — month bucketing, the month-over-month comparison, budget
-pace, the 12-month analytics — with no database needed. CI runs it on every pull request
-alongside format, lint, types and a full build.
+**`npm test`** covers the pure logic — period bucketing and comparison, budget pace, the 12-month
+analytics, receipt parsing, date-range resolution, batch queueing, invitation expiry and email
+canonicalisation — 243 tests, no database needed. CI runs it on every pull request alongside
+format, lint, types and a full build.
 
-**Four end-to-end scripts** exercise the trickier database rules against a real Supabase
-project. All create and delete their own temporary users, so they're safe to re-run:
+**Five end-to-end scripts** (113 checks) exercise the database rules against a real Supabase
+project, driven through the Data API as real signed-in users — so a policy mistake surfaces here
+rather than in production. All create and delete their own temporary users, so they're safe to
+re-run:
 
 ```bash
-npx dotenv -e .env.local -- node scripts/test-household-flow.mjs    # household sharing + RLS
-npx dotenv -e .env.local -- node scripts/test-recurring-flow.mjs    # recurring date maths + generation
-npx dotenv -e .env.local -- node scripts/test-budget-flow.mjs       # budget scoping, RLS + unique indexes
-npx dotenv -e .env.local -- node scripts/test-analytics-flow.mjs    # monthly_spending RPC: sums, bounds, RLS
+npx dotenv -e .env.local -- node scripts/test-household-flow.mjs           # sharing, invitations + RLS
+npx dotenv -e .env.local -- node scripts/test-household-spending-flow.mjs  # pooled totals per member
+npx dotenv -e .env.local -- node scripts/test-recurring-flow.mjs           # recurring date maths + generation
+npx dotenv -e .env.local -- node scripts/test-budget-flow.mjs              # budget scoping, RLS + unique indexes
+npx dotenv -e .env.local -- node scripts/test-analytics-flow.mjs           # monthly_spending RPC: sums, bounds, RLS
 ```
 
 > [!IMPORTANT]
@@ -293,17 +304,34 @@ npx dotenv -e .env.local -- node scripts/test-analytics-flow.mjs    # monthly_sp
 
 ## Deployment
 
-The app is deployed to [Vercel](https://vercel.com), connected to this repository. Every pull request gets a preview deployment; merges to `main` deploy to production.
+Production is **[snapbudget.space](https://snapbudget.space)**, on [Vercel](https://vercel.com) and
+connected to this repository. Every pull request gets a preview deployment; merges to `main` deploy
+to production. The apex redirects to `www`, which is the canonical host.
 
 Environment variables must be configured in the Vercel project settings (Production, Preview, and Development) to match `.env.example`.
+
+> [!IMPORTANT]
+> Preview deployments share the **production** database — they are not an isolated environment.
+> Anything written while testing a pull request is written for real.
+
+> [!NOTE]
+> The host appears outside this repo as well, and nothing here checks that the copies agree:
+> Supabase Auth's Site URL and redirect allow-list, `NEXT_PUBLIC_SITE_URL`, and the Resend sending
+> domain. Changing the domain without updating all of them fails quietly — an unlisted redirect
+> sends sign-ins back to the old host, and a missing site URL creates invitations that send no
+> email.
 
 ## Supabase setup
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. Enable the **Google** provider under Authentication > Providers, using your Google OAuth client ID/secret.
-3. Create a Storage bucket for receipt images.
-4. Copy the project URL and API keys into your environment variables.
-5. Apply the migrations (see above). They enable the `pg_cron` extension and schedule the nightly `snapbudget-generate-recurring` sweep that mints due recurring expenses.
+3. Under Authentication > URL Configuration, set the **Site URL** to the host the app is served on
+   and add it to the **Redirect URLs** allow-list. Supabase silently falls back to the Site URL
+   when `redirectTo` is not allow-listed, which sends sign-ins to the wrong host and reads as a
+   button that did nothing.
+4. Create a Storage bucket for receipt images.
+5. Copy the project URL and API keys into your environment variables.
+6. Apply the migrations (see above). They enable the `pg_cron` extension and schedule the nightly `snapbudget-generate-recurring` sweep that mints due recurring expenses.
 
 ## Branching
 
