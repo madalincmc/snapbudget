@@ -1,13 +1,8 @@
 import { redirect } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import {
-  buildDashboardData,
-  dashboardRange,
-  isMonthKey,
-  monthKeyOf,
-  type ReceiptRow,
-} from '@/lib/dashboard/aggregate';
+import { buildPeriodData, monthKeyOf, type ReceiptRow } from '@/lib/dashboard/aggregate';
+import { periodFetchRange, periodFromParams } from '@/lib/dashboard/period';
 import { expensesBetween, RECEIPT_COLUMNS } from '@/lib/dashboard/query';
 import { categoryPath } from '@/lib/dashboard/links';
 import { CATEGORIES, type Category } from '@/lib/categories';
@@ -19,7 +14,7 @@ import {
   type Budget,
   type BudgetRow,
 } from '@/lib/budgets';
-import { MonthPicker } from '@/components/month-picker';
+import { PeriodPicker } from '@/components/period-picker';
 import { AppearanceMenu } from '@/components/appearance-menu';
 import { CategoryBreakdown } from '@/components/category-breakdown';
 import { MonthHeroCard } from '@/components/month-hero-card';
@@ -39,7 +34,7 @@ import { signOut } from './actions';
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ who?: string; month?: string }>;
+  searchParams: Promise<{ who?: string; month?: string; from?: string; to?: string }>;
 }) {
   const supabase = await createClient();
   const {
@@ -50,7 +45,7 @@ export default async function DashboardPage({
     redirect('/login');
   }
 
-  const { who, month: monthParam } = await searchParams;
+  const { who, month: monthParam, from: fromParam, to: toParam } = await searchParams;
 
   const membership = await getHouseholdMembership(supabase, user.id);
 
@@ -94,14 +89,18 @@ export default async function DashboardPage({
   const now = new Date();
   const currentMonth = monthKeyOf(now);
 
-  // A malformed or future month falls back to the current one rather than
-  // rendering an empty dashboard for a period that cannot have data.
-  const month = isMonthKey(monthParam) && monthParam <= currentMonth ? monthParam : currentMonth;
-  const isCurrentMonth = month === currentMonth;
+  // One period drives every figure below. A malformed month, or an interval the
+  // chart cannot draw, falls back to the current month rather than rendering a
+  // dashboard for a period that cannot have data.
+  const period = periodFromParams({ month: monthParam, from: fromParam, to: toParam }, now);
+  // Whether the reader is looking at the month they are in, rather than merely
+  // at a period that happens to include today.
+  const isCurrentMonth = period.month === currentMonth;
+  const view = period.kind === 'custom' ? { from: period.from, to: period.to } : {};
 
-  // The selected month, the one before it for the comparison card, and — on the
-  // live month — the trailing 30 days the chart needs.
-  const { from, to } = dashboardRange(month, now);
+  // The window, whatever it is compared against, and whatever the chart reaches
+  // back to — the widest of the three.
+  const { from, to } = periodFetchRange(period);
 
   let rangeQuery = expensesBetween(supabase, from, to);
   let latestQuery = supabase
@@ -184,14 +183,14 @@ export default async function DashboardPage({
   };
 
   const {
-    monthTotal,
+    total: monthTotal,
     categoryTotals,
     comparison,
     topCategory,
     biggestExpense,
     avgDailySpend,
     dailyTrend,
-  } = buildDashboardData((rangeReceipts ?? []) as ReceiptRow[], month, now);
+  } = buildPeriodData((rangeReceipts ?? []) as ReceiptRow[], period);
   const latest = (latestReceipts ?? []) as ReceiptRow[];
   const hasAnyExpense = (totalReceipts ?? 0) > 0;
 
@@ -204,7 +203,7 @@ export default async function DashboardPage({
   const categoryHrefs = Object.fromEntries(
     CATEGORIES.map((c) => [
       c,
-      categoryPath(c, { month: isCurrentMonth ? null : month, who: validWho }),
+      categoryPath(c, { month: isCurrentMonth ? null : period.month, who: validWho, ...view }),
     ]),
   ) as Record<Category, string>;
 
@@ -254,7 +253,7 @@ export default async function DashboardPage({
           // screen first — which is what the app was opened for.
           <>
             <div className="sb-fade -mt-1 flex justify-center" style={delay(40)}>
-              <MonthPicker month={month} currentMonth={currentMonth} />
+              <PeriodPicker period={period} currentMonth={currentMonth} />
             </div>
 
             {/* The number, and whether it is a problem — one card. */}
@@ -263,8 +262,7 @@ export default async function DashboardPage({
                 <MonthHeroCard
                   comparison={comparison}
                   avgDailySpend={avgDailySpend}
-                  month={month}
-                  isCurrentMonth={isCurrentMonth}
+                  period={period}
                   budget={budgetScope ? budgetOverview.overall : null}
                 />
               </CardContent>
@@ -284,11 +282,7 @@ export default async function DashboardPage({
 
             <Card className="sb-rise" style={delay(290)}>
               <CardContent>
-                <SpendingTrendChart
-                  data={dailyTrend}
-                  month={month}
-                  isCurrentMonth={isCurrentMonth}
-                />
+                <SpendingTrendChart data={dailyTrend} period={period} />
               </CardContent>
             </Card>
 

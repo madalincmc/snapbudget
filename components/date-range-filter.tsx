@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, type MouseEvent } from 'react';
+import { useState } from 'react';
 import { CalendarRange, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { formatListDate } from '@/lib/dashboard/format';
-import { cn } from '@/lib/utils';
+import { DateField } from '@/components/date-field';
 import {
   ALL_PERIODS_LABEL,
   PERIOD_LABELS,
@@ -14,75 +13,6 @@ import {
   isDateKey,
   type DateFilter,
 } from '@/lib/history/date-range';
-
-/**
- * Opens the platform's date picker.
- *
- * A native date input only opens its picker from the small icon at its trailing
- * edge, and typing a date is not what anyone opened a filter to do — so the
- * whole row is made to open it instead.
- */
-function openPicker(event: MouseEvent<HTMLInputElement>) {
-  const input = event.currentTarget;
-  if (typeof input.showPicker !== 'function') return;
-
-  try {
-    input.showPicker();
-  } catch {
-    // Throws when the picker is already open and on browsers that have none.
-    // Neither is worth breaking the tap over.
-  }
-}
-
-/**
- * One end of the custom interval.
- *
- * The native control is here for its picker and nothing else: it is stretched
- * invisibly across the whole row, so a tap anywhere opens the platform's
- * calendar, while the date the reader sees is drawn by us. That is what keeps
- * "15 aug" from being `mm/dd/yyyy` in a Romanian app — and, because the input
- * is taken out of the layout entirely, what stops its intrinsic width from
- * dictating how wide this popover has to be. Sizing the panel around that
- * width is what made the fields overlap and then overhang on a phone.
- */
-function DateRow({
-  label,
-  value,
-  min,
-  max,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  min?: string;
-  max?: string;
-  onChange: (value: string) => void;
-}) {
-  const chosen = isDateKey(value);
-
-  return (
-    <label className="focus-within:bg-muted/60 hover:bg-muted/40 relative flex cursor-pointer items-center justify-between gap-3 px-3 py-2.5 transition-colors">
-      <span className="text-muted-foreground text-xs">{label}</span>
-      <span
-        className={cn(
-          'truncate text-sm font-medium',
-          chosen ? 'text-foreground' : 'text-muted-foreground/60',
-        )}
-      >
-        {chosen ? formatListDate(value) : 'Alege data'}
-      </span>
-      <input
-        type="date"
-        value={value}
-        min={min}
-        max={max}
-        onClick={openPicker}
-        onChange={(event) => onChange(event.target.value)}
-        className="absolute inset-0 cursor-pointer opacity-0"
-      />
-    </label>
-  );
-}
 
 /**
  * The period the history list is scoped to: one of five named stretches, or an
@@ -165,13 +95,13 @@ export function DateRangeFilter({
               is a single interval, and the two rows stacked keep every width
               question out of it. */}
           <div className="border-input divide-border divide-y overflow-hidden rounded-lg border">
-            <DateRow
+            <DateField
               label="De la"
               value={from}
               max={isDateKey(to) ? to : undefined}
               onChange={setFrom}
             />
-            <DateRow
+            <DateField
               label="Până la"
               value={to}
               min={isDateKey(from) ? from : undefined}

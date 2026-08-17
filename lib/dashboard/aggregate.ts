@@ -38,16 +38,16 @@ export interface DailySpend {
 }
 
 export interface DashboardData {
-  monthTotal: number;
+  total: number;
   categoryTotals: CategoryTotal[];
   comparison: MonthComparison;
   topCategory: CategoryTotal | null;
   biggestExpense: BiggestExpense | null;
   avgDailySpend: number;
-  /** Zero-filled daily totals: a rolling 30 days for the current month, or every day of a past one. */
+  /** Zero-filled daily totals over the period's charted days. */
   dailyTrend: DailySpend[];
-  /** Whether the selected period is the month `now` falls in — drives "so far" vs. final wording. */
-  isCurrentMonth: boolean;
+  /** Whether the period is still running — drives "so far" vs. final wording. */
+  isLive: boolean;
 }
 
 /**
@@ -142,31 +142,180 @@ export function isSpent(r: ReceiptRow): boolean {
   return r.status === 'processed' && r.amount !== null;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Period                                                                      */
+/* -------------------------------------------------------------------------- */
+
 /**
- * Aggregates one month's view. `month` selects the period; `now` is only used
- * to tell a live month from a finished one — which changes two things:
- * the daily chart window, and whether the average is per elapsed day or per
- * day of the whole month. Dividing a finished month by its elapsed days would
- * report every past month as if it ended today.
+ * The window every figure on a dashboard is measured over.
+ *
+ * One shape for both a month and an arbitrary interval, so the two cannot end
+ * up computed by different code — the whole point being that the total, the
+ * breakdown, the chart and the comparison always describe the same days.
+ * A month is just the constructor that fills this in with month boundaries.
+ */
+export interface DashboardPeriod {
+  kind: 'month' | 'custom';
+  /** Inclusive day bounds, "YYYY-MM-DD". */
+  from: string;
+  to: string;
+  /** The window the comparison measures against — same length, immediately before. */
+  previousFrom: string;
+  previousTo: string;
+  /** What the daily average divides by; a running window counts only elapsed days. */
+  days: number;
+  /** The days the trend chart plots, oldest first. */
+  trendDays: string[];
+  /** The window contains today. */
+  isLive: boolean;
+  /** Set for a month period only — the screens and links still keyed by month. */
+  month: MonthKey | null;
+}
+
+/**
+ * Day arithmetic in UTC, on values that are calendar dates rather than
+ * instants: local arithmetic across a DST boundary can land on the same day
+ * twice, or skip one.
+ */
+function dayToUtc(key: string): number {
+  const [year, month, day] = key.split('-').map(Number);
+  return Date.UTC(year, month - 1, day);
+}
+
+function utcToDay(ms: number): string {
+  const d = new Date(ms);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+
+const DAY_MS = 86_400_000;
+
+export function addDays(key: string, delta: number): string {
+  return utcToDay(dayToUtc(key) + delta * DAY_MS);
+}
+
+/** How many days the interval covers, counting both ends. */
+export function daysBetween(from: string, to: string): number {
+  return Math.floor((dayToUtc(to) - dayToUtc(from)) / DAY_MS) + 1;
+}
+
+/** Every day from `from` to `to`, inclusive, oldest first. */
+export function daysRange(from: string, to: string): string[] {
+  const out: string[] = [];
+  for (let ms = dayToUtc(from); ms <= dayToUtc(to); ms += DAY_MS) out.push(utcToDay(ms));
+  return out;
+}
+
+/**
+ * A whole calendar month.
+ *
+ * The live month keeps the two things that make it read as "so far": a
+ * trailing-30-day chart that deliberately spans the month boundary, and an
+ * average over elapsed days rather than the days the month will end up having.
+ */
+export function monthPeriod(month: MonthKey, now = new Date()): DashboardPeriod {
+  const start = monthKeyToDate(month);
+  const length = daysInMonthKey(month);
+  const isCurrentMonth = month === monthKeyOf(now);
+
+  const previous = shiftMonthKey(month, -1);
+  const previousStart = monthKeyToDate(previous);
+
+  return {
+    kind: 'month',
+    month,
+    from: toDateString(start),
+    to: toDateString(new Date(start.getFullYear(), start.getMonth(), length)),
+    previousFrom: toDateString(previousStart),
+    previousTo: toDateString(
+      new Date(previousStart.getFullYear(), previousStart.getMonth(), daysInMonthKey(previous)),
+    ),
+    days: isCurrentMonth ? now.getDate() : length,
+    trendDays: monthTrendDays(month, now),
+    isLive: isCurrentMonth,
+  };
+}
+
+/**
+ * An interval the reader drew themselves.
+ *
+ * Compared against the stretch of the same length immediately before it, which
+ * is what "previous month" already means for a month and the only reading that
+ * holds for a fortnight or a holiday.
+ */
+export function customPeriod(fromKey: string, toKey: string, now = new Date()): DashboardPeriod {
+  // Drawn back to front is a slip, not a request for nothing.
+  const [from, to] = fromKey <= toKey ? [fromKey, toKey] : [toKey, fromKey];
+
+  const length = daysBetween(from, to);
+  const previousTo = addDays(from, -1);
+  const today = toDateString(now);
+  const isLive = from <= today && today <= to;
+
+  return {
+    kind: 'custom',
+    month: null,
+    from,
+    to,
+    previousFrom: addDays(previousTo, -(length - 1)),
+    previousTo,
+    days: isLive ? daysBetween(from, today) : length,
+    trendDays: daysRange(from, to),
+    isLive,
+  };
+}
+
+/** The days the trend chart plots for a month — see buildDailyTrend. */
+function monthTrendDays(month: MonthKey, now: Date): string[] {
+  if (month === monthKeyOf(now)) {
+    return Array.from({ length: 30 }, (_, i) =>
+      toDateString(new Date(now.getFullYear(), now.getMonth(), now.getDate() - (29 - i))),
+    );
+  }
+
+  const start = monthKeyToDate(month);
+  return Array.from({ length: daysInMonthKey(month) }, (_, i) =>
+    toDateString(new Date(start.getFullYear(), start.getMonth(), i + 1)),
+  );
+}
+
+/**
+ * Aggregates one month's view — the period constructor plus the shared core,
+ * so a month and a custom interval are the same computation over different
+ * bounds rather than two implementations that can drift.
  */
 export function buildDashboardData(
   receipts: ReceiptRow[],
   month: MonthKey = monthKeyOf(new Date()),
   now = new Date(),
 ): DashboardData {
-  const previousMonth = shiftMonthKey(month, -1);
-  const isCurrentMonth = month === monthKeyOf(now);
+  return buildPeriodData(receipts, monthPeriod(month, now));
+}
 
-  const monthly = receipts.filter((r) => isSpent(r) && receiptMonth(r) === month);
-  const previousMonthly = receipts.filter((r) => isSpent(r) && receiptMonth(r) === previousMonth);
+/** Rows whose day falls inside the window, both ends included. */
+function within(receipts: ReceiptRow[], from: string, to: string): ReceiptRow[] {
+  return receipts.filter((r) => {
+    if (!isSpent(r)) return false;
+    const day = receiptDay(r);
+    return day >= from && day <= to;
+  });
+}
 
-  const monthTotal = monthly.reduce((sum, r) => sum + (r.amount ?? 0), 0);
-  const previousTotal = previousMonthly.reduce((sum, r) => sum + (r.amount ?? 0), 0);
-  const hasPreviousData = previousMonthly.length > 0;
+/**
+ * Every figure the dashboard shows, over one period.
+ *
+ * Bounds only — nothing in here knows what a month is. That is what keeps the
+ * total, the breakdown, the chart and the comparison describing the same days
+ * whichever way the period was chosen.
+ */
+export function buildPeriodData(receipts: ReceiptRow[], period: DashboardPeriod): DashboardData {
+  const current = within(receipts, period.from, period.to);
+  const previous = within(receipts, period.previousFrom, period.previousTo);
+
+  const total = current.reduce((sum, r) => sum + (r.amount ?? 0), 0);
+  const previousTotal = previous.reduce((sum, r) => sum + (r.amount ?? 0), 0);
+  const hasPreviousData = previous.length > 0;
   const percentChange =
-    hasPreviousData && previousTotal > 0
-      ? ((monthTotal - previousTotal) / previousTotal) * 100
-      : null;
+    hasPreviousData && previousTotal > 0 ? ((total - previousTotal) / previousTotal) * 100 : null;
   const direction: MonthComparison['direction'] =
     percentChange === null
       ? 'flat'
@@ -177,7 +326,7 @@ export function buildDashboardData(
           : 'flat';
 
   const totals = new Map<Category, number>(CATEGORIES.map((category) => [category, 0]));
-  for (const r of monthly) {
+  for (const r of current) {
     const category = receiptCategory(r);
     totals.set(category, (totals.get(category) ?? 0) + (r.amount ?? 0));
   }
@@ -193,7 +342,7 @@ export function buildDashboardData(
     return top;
   }, null);
 
-  const biggestExpense = monthly.reduce<BiggestExpense | null>((biggest, r) => {
+  const biggestExpense = current.reduce<BiggestExpense | null>((biggest, r) => {
     if (r.amount === null) return biggest;
     if (!biggest || r.amount > biggest.amount) {
       return { merchant: r.merchant ?? 'Comerciant necunoscut', amount: r.amount };
@@ -201,16 +350,11 @@ export function buildDashboardData(
     return biggest;
   }, null);
 
-  const daysElapsed = isCurrentMonth ? now.getDate() : daysInMonthKey(month);
-  const avgDailySpend = daysElapsed > 0 ? monthTotal / daysElapsed : 0;
-
-  const dailyTrend = buildDailyTrend(receipts, month, now);
-
   return {
-    monthTotal,
+    total,
     categoryTotals,
     comparison: {
-      currentTotal: monthTotal,
+      currentTotal: total,
       previousTotal,
       percentChange,
       hasPreviousData,
@@ -218,10 +362,23 @@ export function buildDashboardData(
     },
     topCategory,
     biggestExpense,
-    avgDailySpend,
-    dailyTrend,
-    isCurrentMonth,
+    avgDailySpend: period.days > 0 ? total / period.days : 0,
+    dailyTrend: trendOverDays(receipts, period.trendDays),
+    isLive: period.isLive,
   };
+}
+
+/** Zero-filled totals for exactly these days, in the order given. */
+export function trendOverDays(receipts: ReceiptRow[], days: string[]): DailySpend[] {
+  const totals = new Map(days.map((day) => [day, 0]));
+
+  for (const r of receipts) {
+    if (!isSpent(r)) continue;
+    const key = receiptDay(r);
+    if (totals.has(key)) totals.set(key, (totals.get(key) ?? 0) + (r.amount ?? 0));
+  }
+
+  return days.map((date) => ({ date, total: totals.get(date) ?? 0 }));
 }
 
 /**
@@ -240,30 +397,5 @@ export function buildDailyTrend(
   month: MonthKey,
   now = new Date(),
 ): DailySpend[] {
-  const isCurrentMonth = month === monthKeyOf(now);
-  const orderedDays: string[] = [];
-
-  if (isCurrentMonth) {
-    for (let i = 29; i >= 0; i--) {
-      orderedDays.push(
-        toDateString(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)),
-      );
-    }
-  } else {
-    const start = monthKeyToDate(month);
-    for (let day = 1; day <= daysInMonthKey(month); day++) {
-      orderedDays.push(toDateString(new Date(start.getFullYear(), start.getMonth(), day)));
-    }
-  }
-
-  const totals = new Map(orderedDays.map((day) => [day, 0]));
-  for (const r of receipts) {
-    if (!isSpent(r)) continue;
-    const key = receiptDay(r);
-    if (totals.has(key)) {
-      totals.set(key, (totals.get(key) ?? 0) + (r.amount ?? 0));
-    }
-  }
-
-  return orderedDays.map((date) => ({ date, total: totals.get(date) ?? 0 }));
+  return trendOverDays(receipts, monthTrendDays(month, now));
 }

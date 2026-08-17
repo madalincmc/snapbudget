@@ -1,3 +1,5 @@
+import { shiftMonthKey, type DashboardPeriod } from '@/lib/dashboard/aggregate';
+
 const MONTH_SHORT = [
   'ian',
   'feb',
@@ -72,6 +74,39 @@ export function monthKeyLabel(key: string, now = new Date()): string {
   const [year, month] = key.split('-');
   const name = MONTH_LONG[Number(month) - 1];
   return Number(year) === now.getFullYear() ? name : `${name} ${year}`;
+}
+
+/**
+ * The period in view, as the dashboard heads its figures with it.
+ *
+ * A month keeps its name; an interval is spelled out end to end, which is the
+ * only thing that describes "15 iul – 15 aug" without inventing a word for it.
+ */
+export function periodLabel(period: DashboardPeriod, now = new Date()): string {
+  if (period.month) return monthKeyLabel(period.month, now);
+  return `${formatListDate(period.from, now)} – ${formatListDate(period.to, now)}`;
+}
+
+/**
+ * What the comparison is against.
+ *
+ * A month can name the one before it. An interval cannot — "the fortnight
+ * before" is not a thing anyone says — so it is described by what it is: the
+ * same length of time, immediately before.
+ */
+export function previousPeriodLabel(period: DashboardPeriod, now = new Date()): string {
+  if (period.month) return monthKeyLabel(shiftMonthKey(period.month, -1), now);
+  return `perioada anterioară`;
+}
+
+/** The heading over the daily chart. */
+export function trendHeading(period: DashboardPeriod, now = new Date()): string {
+  // A live month charts a trailing thirty days rather than its own, so the
+  // heading has to say so — the columns reach back into the previous month.
+  if (period.month) {
+    return period.isLive ? 'Ultimele 30 de zile' : `Zilele din ${monthKeyLabel(period.month, now)}`;
+  }
+  return `${formatListDate(period.from, now)} – ${formatListDate(period.to, now)}`;
 }
 
 /** Compact form for chart axes, e.g. "aug" — with a year suffix only in January. */
