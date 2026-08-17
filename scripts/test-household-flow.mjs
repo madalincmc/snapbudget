@@ -202,13 +202,29 @@ try {
     .eq('household_id', householdId);
   check('owner sees both expenses (combined household total)', (ownerSeesAll ?? []).length === 2);
 
-  console.log('\n7. Members can only edit their own expenses');
+  // Asserted the opposite until the receipt-edit migration (2026-08-14) made
+  // UPDATE and DELETE match SELECT: a shared household is one pot, so whoever
+  // spots a wrong entry can fix it, not only whoever photographed the receipt.
+  // The check was left behind and had been failing ever since.
+  console.log('\n7. Members can edit each other’s expenses');
   const { data: editAttempt } = await member
     .from('receipts')
     .update({ amount: 999 })
     .eq('id', ownerReceiptId)
     .select('id');
-  check("member cannot edit the owner's expense", (editAttempt ?? []).length === 0);
+  check("member can edit the owner's expense", (editAttempt ?? []).length === 1);
+
+  // The other half of that policy: an edit must not be able to push a row
+  // somewhere the editor could no longer reach it.
+  const { data: detachAttempt } = await member
+    .from('receipts')
+    .update({ household_id: null })
+    .eq('id', ownerReceiptId)
+    .select('id');
+  check(
+    "member cannot detach the owner's expense from the household",
+    (detachAttempt ?? []).length === 0,
+  );
 
   console.log('\n8. Co-membership drives shared receipt-photo access');
   const { data: coMember } = await member.rpc('is_household_co_member', {
