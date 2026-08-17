@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Camera, Repeat2, Users } from 'lucide-react';
 import { GoogleSignInButton } from '@/components/google-sign-in-button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { delay } from '@/lib/utils';
 
@@ -13,9 +14,9 @@ const PROMISES = [
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; error?: string }>;
 }) {
-  const { next } = await searchParams;
+  const { next, error } = await searchParams;
 
   return (
     <div className="flex flex-1 items-center justify-center px-6 py-10">
@@ -51,6 +52,18 @@ export default async function LoginPage({
                 </li>
               ))}
             </ul>
+
+            {/* The callback redirects here with ?error=auth when the code
+                exchange fails. Without this the page renders identically to a
+                fresh visit, so a failed sign-in looks like a click that did
+                nothing — and the reader tries again rather than telling anyone. */}
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  Conectarea nu a reușit. Încearcă din nou — dacă se repetă, scrie-ne.
+                </AlertDescription>
+              </Alert>
+            )}
 
             <div className="sb-rise flex flex-col items-center gap-3" style={delay(400)}>
               <GoogleSignInButton next={next ?? '/dashboard'} />
