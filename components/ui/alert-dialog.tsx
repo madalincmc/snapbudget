@@ -67,12 +67,21 @@ function AlertDialogHeader({ className, ...props }: React.ComponentProps<'div'>)
   );
 }
 
+/**
+ * `[&>form]:contents` is load-bearing. A destructive action driven by a server
+ * action has to be wrapped in a form, and that wrapper — not the button —
+ * became the flex item: stretched to the full width of the column the footer
+ * lays out on a phone, with the button left at its content width against the
+ * left edge, while the cancel button beside it filled the row. Taking the form
+ * out of the layout puts the button back in it, and leaves the row of
+ * auto-width buttons on desktop exactly as it was.
+ */
 function AlertDialogFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="alert-dialog-footer"
       className={cn(
-        'bg-muted/50 -mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t p-4 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end',
+        'bg-muted/50 -mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t p-4 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end [&>form]:contents',
         className,
       )}
       {...props}
