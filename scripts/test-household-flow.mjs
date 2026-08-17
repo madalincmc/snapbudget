@@ -21,7 +21,7 @@ const ownerEmail = `test-owner-${suffix}@snapbudget-test.local`;
 const memberEmail = `test-member-${suffix}@snapbudget-test.local`;
 const password = 'Test-Password-123!';
 
-let ownerId, memberId, householdId, invitationId, ownerReceiptId, memberReceiptId;
+let ownerId, memberId, gmailInviteeId, householdId, invitationId, ownerReceiptId, memberReceiptId;
 let failures = 0;
 
 function check(label, condition, extra = '') {
@@ -103,6 +103,75 @@ try {
     .insert({ household_id: householdId, email: memberEmail, invited_by: ownerId })
     .select('id');
   check('duplicate pending invitation is rejected', !dupInvite);
+
+  // MAD-78. Gmail ignores dots and +tags, so these three spellings are one
+  // mailbox — and Google reports whichever the account was registered under.
+  // Matching on the string alone delivered the mail and then refused the
+  // invitation.
+  const gmailPlain = `snapbudgettest${suffix}@gmail.com`;
+  const gmailDotted = `snapbudget.test.${suffix}+invite@gmail.com`;
+
+  const { data: gmailUser, error: gmailUserErr } = await admin.auth.admin.createUser({
+    email: gmailPlain,
+    password,
+    email_confirm: true,
+  });
+  if (gmailUserErr) fatal('gmail-shaped invitee created', gmailUserErr.message);
+  gmailInviteeId = gmailUser.user.id;
+  const gmailInvitee = await signInAs(gmailPlain);
+
+  const { error: dottedErr } = await owner
+    .from('household_invitations')
+    .insert({ household_id: householdId, email: gmailDotted, invited_by: ownerId });
+  check('owner can invite a dotted gmail spelling', !dottedErr, dottedErr?.message);
+
+  const { data: dottedSeen } = await gmailInvitee
+    .from('household_invitations')
+    .select('id, email, households(name)')
+    .eq('status', 'pending')
+    .eq('email_canonical', gmailPlain);
+  check(
+    'invitee sees an invitation addressed to another spelling of their mailbox',
+    (dottedSeen ?? []).length === 1,
+  );
+  check(
+    'the address the owner typed is kept as typed',
+    dottedSeen?.[0]?.email === gmailDotted,
+    dottedSeen?.[0]?.email,
+  );
+  check(
+    'and the household name still resolves for the banner',
+    dottedSeen?.[0]?.households?.name === 'Test Household',
+  );
+
+  // One live invitation per mailbox, not per spelling — otherwise two links
+  // reach the same person and both work.
+  const { data: sameMailbox } = await owner
+    .from('household_invitations')
+    .insert({ household_id: householdId, email: gmailPlain, invited_by: ownerId })
+    .select('id');
+  check('a second spelling of the same mailbox is rejected', !sameMailbox);
+
+  const { error: dottedCancelErr } = await owner
+    .from('household_invitations')
+    .update({ status: 'cancelled', responded_at: new Date().toISOString() })
+    .eq('id', dottedSeen?.[0]?.id);
+  check('owner can cancel it again', !dottedCancelErr, dottedCancelErr?.message);
+
+  // Non-Gmail is left exactly as entered: a dot there is a real character.
+  const { data: otherProvider } = await owner
+    .from('household_invitations')
+    .insert({
+      household_id: householdId,
+      email: `a.b.${suffix}@snapbudget-test.local`,
+      invited_by: ownerId,
+    })
+    .select('email_canonical');
+  check(
+    'a dot outside gmail is preserved',
+    otherProvider?.[0]?.email_canonical === `a.b.${suffix}@snapbudget-test.local`,
+    otherProvider?.[0]?.email_canonical,
+  );
 
   console.log('\n3. Before accepting, the invitee sees the invite but not the data');
   const { data: blockedMembers } = await member
@@ -288,6 +357,7 @@ try {
   console.log('\nCleaning up temporary users (cascades to their data)...');
   if (ownerId) await admin.auth.admin.deleteUser(ownerId).catch(() => {});
   if (memberId) await admin.auth.admin.deleteUser(memberId).catch(() => {});
+  if (gmailInviteeId) await admin.auth.admin.deleteUser(gmailInviteeId).catch(() => {});
   console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`);
 }
 

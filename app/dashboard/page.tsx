@@ -7,6 +7,7 @@ import { expensesBetween, RECEIPT_COLUMNS } from '@/lib/dashboard/query';
 import { categoryPath } from '@/lib/dashboard/links';
 import { CATEGORIES, type Category } from '@/lib/categories';
 import { getHouseholdMembership, type HouseholdMemberInfo } from '@/lib/household/membership';
+import { canonicalEmail } from '@/lib/household/invitations';
 import {
   buildBudgetOverview,
   parseBudgetRow,
@@ -72,7 +73,7 @@ export default async function DashboardPage({
       .from('household_invitations')
       .select('id, households(name)')
       .eq('status', 'pending')
-      .ilike('email', user.email);
+      .eq('email_canonical', canonicalEmail(user.email));
 
     pendingInvitations = (data ?? [])
       .filter((inv) => inv.households)
