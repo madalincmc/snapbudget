@@ -3,6 +3,7 @@ import { ViewTransition } from 'react';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import { DEFAULT_PALETTE, THEME_INIT_SCRIPT } from '@/lib/theme';
+import { BackNavRefresh } from '@/components/back-nav-refresh';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -39,6 +40,7 @@ export default function RootLayout({
             rather than per page means every navigation in the app gets it,
             including the ones between the bottom-nav tabs. */}
         <ViewTransition>{children}</ViewTransition>
+        <BackNavRefresh />
       </body>
     </html>
   );

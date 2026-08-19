@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { CATEGORIES, isSubcategoryOf, type Category } from '@/lib/categories';
 import { getHouseholdMembership } from '@/lib/household/membership';
@@ -58,5 +59,6 @@ export async function createManualExpense(formData: FormData) {
     throw new Error(error.message);
   }
 
+  revalidatePath('/dashboard');
   redirect('/dashboard');
 }
