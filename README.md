@@ -199,6 +199,7 @@ app/globals.css       # Design tokens: the four palettes, category + status colo
 components/           # UI components — shadcn/ui primitives in components/ui, plots in components/charts
 lib/                  # Supabase clients, OCR, categorization, dashboard aggregation, email, theme
 __tests__/            # Vitest unit tests for the pure date/money/parsing logic
+e2e/                  # Playwright browser tests
 supabase/migrations/  # SQL: schema, RLS policies, pg_cron job, aggregate RPC
 scripts/              # Migration runner and end-to-end RLS/recurring checks
 types/                # Shared TypeScript types
@@ -272,6 +273,7 @@ npm run start           # Serve the production build
 npm run lint            # ESLint
 npm test                # Vitest — unit tests, single run
 npm run test:watch      # Vitest in watch mode
+npm run test:e2e        # Playwright — browser end-to-end tests
 npm run format          # Prettier — write
 npm run format:check    # Prettier — check only
 npm run db:migrate <f>  # Apply a single SQL migration
@@ -301,6 +303,22 @@ npx dotenv -e .env.local -- node scripts/test-analytics-flow.mjs           # mon
 > These stay out of CI on purpose: they need the service-role key and write to a live database,
 > and on a public repository that key would have to live in Actions secrets. Run them by hand
 > before merging anything that touches `supabase/migrations/`.
+
+**`npm run test:e2e`** drives the real app in a real browser with [Playwright](https://playwright.dev)
+— starting logged out, signing in, and clicking through the app the way a user would. Real Google
+sign-in can't be scripted (no password gets typed on its behalf), so login is seeded instead: the
+test asks Supabase's admin API for a magic-link token for a dedicated `e2e-playwright@` account and
+redeems it at `app/api/test/login`, which 404s outside `next dev` and only ever exists locally. That
+route calls the same `auth.verifyOtp` a clicked email link would, through the app's own cookie
+plumbing, so the resulting session is real — everything downstream of login runs unmodified. The
+test account is wiped of its own data after every run and never touches a real user's.
+
+Same live-database caveat as the RLS scripts above — needs `SUPABASE_SERVICE_ROLE_KEY`, stays out
+of CI, run by hand:
+
+```bash
+npm run test:e2e
+```
 
 ## Deployment
 
