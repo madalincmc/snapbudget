@@ -74,7 +74,10 @@ export function SpendingTrendChart({
         plotHeight="h-28"
         maxBarWidth={9}
         axis={
-          <div className="text-muted-foreground flex justify-between text-[10px] tabular-nums">
+          <div
+            key="axis"
+            className="text-muted-foreground flex justify-between text-[10px] tabular-nums"
+          >
             <span>{formatDayLabel(data[0].date)}</span>
             <span>{formatDayLabel(data[Math.floor((data.length - 1) / 2)].date)}</span>
             <span>{period.isLive ? 'Azi' : formatDayLabel(data[todayIndex].date)}</span>

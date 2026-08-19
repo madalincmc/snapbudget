@@ -56,7 +56,7 @@ export function MonthlyTrendChart({
         plotHeight="h-32"
         maxBarWidth={18}
         axis={
-          <div className="text-muted-foreground flex text-[10px] tabular-nums">
+          <div key="axis" className="text-muted-foreground flex text-[10px] tabular-nums">
             {monthTotals.map((m, i) => (
               <span key={m.month} className="flex-1 text-center">
                 {/* Every other label, so twelve of them do not collide on a phone. */}
