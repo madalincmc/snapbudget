@@ -8,6 +8,7 @@ import { formatListDate } from '@/lib/dashboard/format';
  * next month. Only a custom interval pins real dates.
  */
 export const PRESET_PERIODS = [
+  'today',
   'this_month',
   'last_month',
   'last_7',
@@ -32,6 +33,7 @@ export interface DateRange {
 }
 
 export const PERIOD_LABELS: Record<PresetPeriod, string> = {
+  today: 'Azi',
   this_month: 'Luna aceasta',
   last_month: 'Luna trecută',
   last_7: 'Ultimele 7 zile',
@@ -77,6 +79,8 @@ export function resolveDateRange(filter: DateFilter, now = new Date()): DateRang
   const month = now.getMonth();
 
   switch (filter.period) {
+    case 'today':
+      return { from: dateKey(now), to: dateKey(now) };
     case 'this_month':
       return {
         from: dateKey(new Date(year, month, 1)),
