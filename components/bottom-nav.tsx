@@ -2,17 +2,20 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Camera, House, History, Users } from 'lucide-react';
+import { Camera, House, History, Lightbulb, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const APP_TABS = [
   { href: '/dashboard', label: 'Acasă', icon: House },
   { href: '/history', label: 'Istoric', icon: History },
   { href: '/household', label: 'Gospodărie', icon: Users },
+  { href: '/advice', label: 'Sfaturi', icon: Lightbulb },
 ];
 
-// The same three screens under /demo. Spelled out rather than prefixed: the
-// dashboard is `/demo` itself, so there is no prefix that produces all three.
+// The same screens under /demo, minus Sfaturi — it needs no account-specific
+// data, so it isn't the kind of thing a demo exists to preview. Spelled out
+// rather than prefixed: the dashboard is `/demo` itself, so there is no
+// prefix that produces the rest.
 const DEMO_TABS = [
   { href: '/demo', label: 'Acasă', icon: House },
   { href: '/demo/history', label: 'Istoric', icon: History },
