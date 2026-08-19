@@ -84,6 +84,8 @@ export function monthKeyLabel(key: string, now = new Date()): string {
  */
 export function periodLabel(period: DashboardPeriod, now = new Date()): string {
   if (period.month) return monthKeyLabel(period.month, now);
+  // A single day (e.g. the "Azi" preset) reads oddly written as its own span.
+  if (period.from === period.to) return formatListDate(period.from, now);
   return `${formatListDate(period.from, now)} – ${formatListDate(period.to, now)}`;
 }
 

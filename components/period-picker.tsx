@@ -9,7 +9,10 @@ import { DateField } from '@/components/date-field';
 import { monthKeyLabel, periodLabel } from '@/lib/dashboard/format';
 import { shiftMonthKey, type DashboardPeriod, type MonthKey } from '@/lib/dashboard/aggregate';
 import { MAX_CUSTOM_DAYS } from '@/lib/dashboard/period';
-import { isDateKey } from '@/lib/history/date-range';
+import { isDateKey, PERIOD_LABELS, resolveDateRange } from '@/lib/history/date-range';
+
+/** The presets short enough to always fit inside the chart's day limit. */
+const QUICK_RANGE_PERIODS = ['today', 'last_7', 'last_30'] as const;
 
 /**
  * Which stretch of time the dashboard is describing.
@@ -55,6 +58,12 @@ export function PeriodPicker({
 
   function goToMonth(month: MonthKey) {
     go({ month, from: null, to: null });
+  }
+
+  function goToQuickRange(quickPeriod: (typeof QUICK_RANGE_PERIODS)[number]) {
+    const range = resolveDateRange({ period: quickPeriod });
+    if (!range?.from || !range.to) return;
+    go({ from: range.from, to: range.to, month: null });
   }
 
   if (period.kind === 'custom') {
@@ -133,39 +142,56 @@ export function PeriodPicker({
 
         <PopoverContent
           align="end"
-          className="w-[20rem] max-w-[calc(100vw_-_2rem)] gap-2.5 overflow-hidden p-2.5"
+          className="w-[20rem] max-w-[calc(100vw_-_2rem)] gap-0 overflow-hidden p-0"
         >
-          <p className="text-muted-foreground px-0.5 text-xs">Interval personalizat</p>
-
-          <div className="border-input divide-border divide-y overflow-hidden rounded-lg border">
-            <DateField
-              label="De la"
-              value={from}
-              max={isDateKey(to) ? to : undefined}
-              onChange={setFrom}
-            />
-            <DateField
-              label="Până la"
-              value={to}
-              min={isDateKey(from) ? from : undefined}
-              onChange={setTo}
-            />
+          <div className="flex flex-col p-1.5">
+            {QUICK_RANGE_PERIODS.map((quickPeriod) => (
+              <Button
+                key={quickPeriod}
+                variant="ghost"
+                size="lg"
+                className="w-full justify-start font-normal"
+                onClick={() => goToQuickRange(quickPeriod)}
+              >
+                {PERIOD_LABELS[quickPeriod]}
+              </Button>
+            ))}
           </div>
 
-          {/* Both ends, unlike the history filter: every figure here is measured
-              per day and compared against the stretch before, and neither means
-              anything without a length. */}
-          <Button
-            size="lg"
-            disabled={!isDateKey(from) || !isDateKey(to)}
-            onClick={() => go({ from, to, month: null })}
-          >
-            Aplică intervalul
-          </Button>
+          <div className="border-border flex flex-col gap-2.5 border-t p-2.5">
+            <p className="text-muted-foreground px-0.5 text-xs">Interval personalizat</p>
 
-          <p className="text-muted-foreground px-0.5 text-[11px]">
-            Cel mult {MAX_CUSTOM_DAYS} de zile — peste atât, graficul zilnic nu mai poate fi citit.
-          </p>
+            <div className="border-input divide-border divide-y overflow-hidden rounded-lg border">
+              <DateField
+                label="De la"
+                value={from}
+                max={isDateKey(to) ? to : undefined}
+                onChange={setFrom}
+              />
+              <DateField
+                label="Până la"
+                value={to}
+                min={isDateKey(from) ? from : undefined}
+                onChange={setTo}
+              />
+            </div>
+
+            {/* Both ends, unlike the history filter: every figure here is measured
+                per day and compared against the stretch before, and neither means
+                anything without a length. */}
+            <Button
+              size="lg"
+              disabled={!isDateKey(from) || !isDateKey(to)}
+              onClick={() => go({ from, to, month: null })}
+            >
+              Aplică intervalul
+            </Button>
+
+            <p className="text-muted-foreground px-0.5 text-[11px]">
+              Cel mult {MAX_CUSTOM_DAYS} de zile — peste atât, graficul zilnic nu mai poate fi
+              citit.
+            </p>
+          </div>
         </PopoverContent>
       </Popover>
     </div>
