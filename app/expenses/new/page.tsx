@@ -2,11 +2,11 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { delay } from '@/lib/utils';
 import { PageHeader } from '@/components/page-header';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ManualExpenseFields } from '@/components/manual-expense-fields';
+import { SubmitButton } from '@/components/submit-button';
 import { createManualExpense } from './actions';
 
 export default async function NewExpensePage() {
@@ -67,9 +67,9 @@ export default async function NewExpensePage() {
             <Textarea id="notes" name="notes" rows={3} placeholder="ex: plătit cash" />
           </div>
 
-          <Button type="submit" size="lg" className="mt-2 h-12 rounded-full">
+          <SubmitButton size="lg" className="mt-2 h-12 rounded-full" pendingLabel="Se salvează…">
             Salvează
-          </Button>
+          </SubmitButton>
         </form>
       </div>
     </div>
