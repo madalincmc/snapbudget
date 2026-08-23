@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 
 /**
@@ -59,6 +60,46 @@ export async function loginTokenHash(): Promise<string> {
     throw new Error(`Failed to generate login link: ${error?.message}`);
   }
   return data.properties.hashed_token;
+}
+
+/**
+ * Signs `page` in as the fixture account.
+ *
+ * Generating a link invalidates every earlier one for that address, so each
+ * spec has to mint its own immediately before redeeming it — sharing one
+ * across two specs silently 403s. Reports the route's own body on failure:
+ * a bare `toHaveURL` timeout here says only that the URL did not change,
+ * which is the least useful half of what went wrong.
+ */
+export async function signIn(page: Page): Promise<void> {
+  const tokenHash = await loginTokenHash();
+  const response = await page.goto(`/api/test/login?token_hash=${tokenHash}`);
+
+  if (!page.url().includes('/dashboard')) {
+    const body = (await page.textContent('body'))?.trim().slice(0, 200);
+    throw new Error(`Test sign-in failed (HTTP ${response?.status()}): ${body}`);
+  }
+}
+
+/**
+ * Seeds a receipt straight into the table, bypassing the forms.
+ *
+ * The only way to get a row with no `purchase_date` now that both forms
+ * refuse to save one — which is exactly the legacy shape the edit screen has
+ * to be able to take in hand and correct.
+ */
+export async function createTestReceipt(
+  userId: string,
+  row: Record<string, unknown>,
+): Promise<string> {
+  const { data, error } = await adminClient()
+    .from('receipts')
+    .insert({ user_id: userId, storage_path: null, source: 'receipt', ...row })
+    .select('id')
+    .single();
+
+  if (error || !data) throw new Error(`Failed to seed receipt: ${error?.message}`);
+  return data.id as string;
 }
 
 /** Every row this account could own is test data — wipe them all. */

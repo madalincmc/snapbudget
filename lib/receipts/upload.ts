@@ -41,6 +41,8 @@ export interface BulkItem {
   receiptId: string | null;
   merchant: string | null;
   amount: number | null;
+  /** "YYYY-MM-DD", or null when OCR could not find a date on the slip. */
+  purchaseDate: string | null;
 }
 
 /** Just the parts of File this module reads, so it can be tested without one. */
@@ -127,6 +129,7 @@ export function addFiles(existing: BulkItem[], incoming: FileLike[]): AddResult 
       receiptId: null,
       merchant: null,
       amount: null,
+      purchaseDate: null,
     });
     added += 1;
   }
@@ -145,9 +148,26 @@ export function isProcessable(item: BulkItem): boolean {
   return item.status === 'pending' || item.status === 'failed';
 }
 
-/** Went through, but with no amount on it — saved, and still needing a hand. */
+/**
+ * Went through, but short of something an expense cannot do without — saved,
+ * and still needing a hand.
+ *
+ * The date counts as much as the amount here. The batch is the one flow with
+ * no review step, so a receipt OCR could not date used to be saved silently
+ * and then sit outside every period the history can filter to.
+ */
 export function needsReview(item: BulkItem): boolean {
-  return item.status === 'success' && item.amount === null;
+  return item.status === 'success' && (item.amount === null || item.purchaseDate === null);
+}
+
+/** What is still missing, for the row to say — or null when nothing is. */
+export function describeReview(item: BulkItem): string | null {
+  if (!needsReview(item)) return null;
+
+  if (item.amount === null && item.purchaseDate === null) {
+    return 'Adăugat — completează suma și data';
+  }
+  return item.amount === null ? 'Adăugat — completează suma' : 'Adăugat — completează data';
 }
 
 export interface BulkProgress {

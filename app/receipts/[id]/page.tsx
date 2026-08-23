@@ -97,11 +97,12 @@ export default async function ReceiptDetailPage({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="purchase_date">Data cumpărării</Label>
+            <Label htmlFor="purchase_date">Data cumpărării — obligatoriu</Label>
             <Input
               id="purchase_date"
               type="date"
               name="purchase_date"
+              required
               defaultValue={receipt.purchase_date ?? ''}
             />
           </div>

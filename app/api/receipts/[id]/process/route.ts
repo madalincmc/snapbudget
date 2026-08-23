@@ -33,7 +33,12 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   try {
     const parsed = await scanReceipt(supabase, receipt.storage_path);
     const { category, subcategory } = parsed;
-    const status = parsed.amount !== null ? 'processed' : 'failed';
+    // The batch has no review step to hold the reading against, so a reading
+    // that is missing either of the two fields an expense cannot do without is
+    // saved unprocessed and flagged on the row instead of counting as done.
+    // A dateless receipt is invisible in the history, which is the harder of
+    // the two to notice — nothing about the row looks wrong.
+    const status = parsed.amount !== null && parsed.purchaseDate !== null ? 'processed' : 'failed';
 
     const { error: updateError } = await supabase
       .from('receipts')
