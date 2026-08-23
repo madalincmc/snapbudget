@@ -97,7 +97,14 @@ function CategoryRow({
   dimmed: boolean;
   onActivate: (category: Category | null) => void;
   delay: number;
-  /** Set makes the row open that category's screen; absent leaves it inert. */
+  /**
+   * Set makes the row open that category's screen; absent leaves it inert.
+   *
+   * Both lists below the bar have to pass it. The disclosure's rows were left
+   * without one when the link was added, so the categories past the fifth
+   * rendered as plain divs — no chevron, no press state, and nothing happened
+   * on tap.
+   */
   href?: string;
 }) {
   // The bar is scaled to the biggest category, not to the limit, so the tick
@@ -315,6 +322,7 @@ export function CategoryBreakdown({
                       dimmed={active !== null && active !== category}
                       onActivate={setActive}
                       delay={index * 50}
+                      href={categoryHrefs[category]}
                     />
                   ))}
                 </div>
