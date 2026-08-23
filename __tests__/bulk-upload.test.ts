@@ -5,6 +5,7 @@ import {
   addFiles,
   bulkProgress,
   describeAddition,
+  describeReview,
   fileKey,
   fileRejection,
   isProcessable,
@@ -28,6 +29,7 @@ function item(id: string, status: BulkStatus, overrides: Partial<BulkItem> = {})
     receiptId: null,
     merchant: null,
     amount: status === 'success' ? 10 : null,
+    purchaseDate: status === 'success' ? '2026-08-01' : null,
     ...overrides,
   };
 }
@@ -160,8 +162,32 @@ describe('needsReview', () => {
     expect(needsReview(item('a', 'success', { amount: 12.5 }))).toBe(false);
   });
 
+  // A dateless receipt reads as complete on the row and then cannot be found:
+  // the history filters on purchase_date, so it falls outside every period.
+  it('flags a receipt that was saved without a date', () => {
+    expect(needsReview(item('a', 'success', { purchaseDate: null }))).toBe(true);
+    expect(needsReview(item('a', 'success', { purchaseDate: '2026-08-23' }))).toBe(false);
+  });
+
   it('is not about failures — those are retried, not reviewed', () => {
     expect(needsReview(item('a', 'failed', { amount: null }))).toBe(false);
+  });
+});
+
+describe('describeReview', () => {
+  it('names whichever field is missing', () => {
+    expect(describeReview(item('a', 'success', { amount: null }))).toContain('suma');
+    expect(describeReview(item('a', 'success', { purchaseDate: null }))).toContain('data');
+  });
+
+  it('names both when the reading came back empty', () => {
+    expect(describeReview(item('a', 'success', { amount: null, purchaseDate: null }))).toBe(
+      'Adăugat — completează suma și data',
+    );
+  });
+
+  it('says nothing about a receipt that is complete', () => {
+    expect(describeReview(item('a', 'success'))).toBeNull();
   });
 });
 

@@ -33,6 +33,7 @@ import {
   addFiles,
   bulkProgress,
   describeAddition,
+  describeReview,
   fileKey,
   isProcessable,
   needsReview,
@@ -179,6 +180,7 @@ export function BulkUpload({
           status: 'success',
           merchant: json.merchant ?? null,
           amount: json.amount ?? null,
+          purchaseDate: json.purchaseDate ?? null,
           error: null,
         });
       } catch (err) {
@@ -363,8 +365,7 @@ function BulkRow({
           {item.status === 'pending' && 'În așteptare'}
           {item.status === 'uploading' && 'Se încarcă…'}
           {item.status === 'processing' && 'Se citește…'}
-          {item.status === 'success' &&
-            (review ? 'Adăugat — completează suma' : `${item.amount?.toFixed(2)} lei`)}
+          {item.status === 'success' && (describeReview(item) ?? `${item.amount?.toFixed(2)} lei`)}
           {item.status === 'failed' && (item.error ?? 'A eșuat')}
         </span>
       </div>

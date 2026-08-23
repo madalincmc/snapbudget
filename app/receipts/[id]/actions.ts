@@ -19,12 +19,19 @@ export async function updateReceipt(id: string, formData: FormData) {
 
   const merchant = String(formData.get('merchant') ?? '').trim() || null;
   const amountRaw = String(formData.get('amount') ?? '').trim();
-  const purchaseDate = String(formData.get('purchase_date') ?? '').trim() || null;
+  const purchaseDate = String(formData.get('purchase_date') ?? '').trim();
   const categoryRaw = String(formData.get('category') ?? '');
 
   const amount = amountRaw ? Number(amountRaw) : null;
   if (amountRaw && (Number.isNaN(amount) || (amount as number) < 0)) {
     throw new Error('Sumă invalidă');
+  }
+
+  // Also the screen the dateless rows are corrected from, so it has to refuse
+  // to hand one back: an edit that saved every other field and left the date
+  // empty would put the receipt straight back outside the history's reach.
+  if (!purchaseDate) {
+    throw new Error('Data cumpărării este obligatorie.');
   }
 
   const category = (

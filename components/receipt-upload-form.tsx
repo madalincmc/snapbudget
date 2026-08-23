@@ -131,12 +131,20 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
     const formData = new FormData(event.currentTarget);
     const merchant = String(formData.get('merchant') ?? '').trim() || null;
     const amountRaw = String(formData.get('amount') ?? '').trim();
-    const purchaseDate = String(formData.get('purchase_date') ?? '').trim() || null;
+    const purchaseDate = String(formData.get('purchase_date') ?? '').trim();
     const categoryRaw = String(formData.get('category') ?? '');
 
     const amount = amountRaw ? Number(amountRaw) : null;
     if (amountRaw && (Number.isNaN(amount) || (amount as number) < 0)) {
       setError('Sumă invalidă');
+      return;
+    }
+
+    // Backs up the field's own `required`. A receipt saved without a date is
+    // the one row the rest of the app has to guess at — the history filters on
+    // purchase_date, so it lands outside every period the reader can pick.
+    if (!purchaseDate) {
+      setError('Data cumpărării este obligatorie.');
       return;
     }
 
@@ -218,11 +226,15 @@ export function ReceiptUploadForm({ userId }: { userId: string }) {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="purchase_date">Data cumpărării</Label>
+          <Label htmlFor="purchase_date">Data cumpărării — obligatoriu</Label>
+          {/* Left empty rather than defaulted to today when OCR could not read
+              one: today is a plausible-looking wrong answer, and the reader
+              holding the receipt is the only one who can tell. */}
           <Input
             id="purchase_date"
             type="date"
             name="purchase_date"
+            required
             defaultValue={result?.purchaseDate ?? ''}
           />
         </div>
