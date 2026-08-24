@@ -116,6 +116,51 @@ ORA:12-47-36
 BON FISCAL
 `;
 
+/**
+ * MAD-123. Photographed against the printed back of another slip, so Vision
+ * returned the show-through text welded into the same rows as the receipt's
+ * own — "TOTALimotnos daqil unde isi133.40b" is the real line, verbatim.
+ *
+ * Two things have to hold at once. `\btotal\b` cannot match a label with
+ * "imotnos" stuck to it, which left the slip with no labelled figure at all;
+ * and the largest-figure fallback that then answered had the card balance to
+ * choose from — 30 817,79 against a 133,40 shop, printed by the terminal after
+ * the payment and split across two lines from its own label.
+ */
+const KAUFLAND_RECEIPT = `
+KAUFLAND ROMANIA SCSI (d)
+BAIA MARE. STR. EXEMPLU. NR. 38
+JUD MARAMURES
+cod Identificare Fiscala: RO12345678
+1.000 BUC X 6.99
+Lel
+6.99 C
+1.000 BUC X 9.99
+TOMI KETCHUPP 500G
+9.99 B
+1.000 BUC X 21.19
+PASTA DINTI 75 ML
+21.19 B
+josinojuden allijnevidni, Josil91 1201 09105 a les
+TOTALimotnos daqil unde isi133.40b
+luluto osnov odibiloz o ob ludqsib and lunodomuenos
+TOTAL TVA
+TVA B 21.00%
+qib yoz pliizom16.00
+6.71
+VOUCHER
+133.40
+Cardonbini ab ibin 09101DQXXXXXXXXXXXX6571 (D)
+Valoare card:
+30,817.79 RON
+Bor:
+Casa:
+49287
+DATA:24/08/2026 ORA:20-16-25
+BON
+FISCAL
+`;
+
 /** No known brand — the company suffix has to carry it. */
 const INDEPENDENT_SHOP = `
 BON FISCAL
@@ -250,6 +295,27 @@ describe('amount', () => {
   it('reads a Romanian decimal comma as a decimal, not a thousands mark', () => {
     expect(parseReceiptText('TOTAL 15,99').amount).toBe(15.99);
     expect(parseReceiptText('TOTAL 0,99').amount).toBe(0.99);
+  });
+
+  it('reads a TOTAL with show-through text welded onto it (MAD-123)', () => {
+    // Was 30817.79 — the card balance, reached for because "TOTALimotnos" did
+    // not match the label and the slip looked entirely unlabelled.
+    expect(parseReceiptText(KAUFLAND_RECEIPT).amount).toBe(133.4);
+  });
+
+  it('still refuses SUBTOTAL now that TOTAL matches unanchored (MAD-123)', () => {
+    // Dropping the word boundary lets "subtotal" reach TOTAL_LABEL too; what
+    // keeps it out is NOT_TOTAL_LABEL being tested first, not the anchor.
+    expect(parseReceiptText('SUBTOTAL 99,00\nTOTAL 45,20').amount).toBe(45.2);
+  });
+
+  it('never guesses a card balance as the total (MAD-123)', () => {
+    // The fallback path on its own: nothing labelled, and the biggest figure
+    // on the slip belongs to the terminal rather than the shop. Both layouts —
+    // balance inline with its label, and split onto the next line.
+    expect(parseReceiptText('45,20\nValoare card: 30.817,79 RON').amount).toBe(45.2);
+    expect(parseReceiptText('45,20\nValoare card:\n30.817,79 RON').amount).toBe(45.2);
+    expect(parseReceiptText('45,20\nSold disponibil\n1.200,00').amount).toBe(45.2);
   });
 
   it('reports nothing when there are no figures at all', () => {
