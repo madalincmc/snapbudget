@@ -107,3 +107,31 @@ export async function deleteTestUserReceipts(userId: string): Promise<void> {
   const { error } = await adminClient().from('receipts').delete().eq('user_id', userId);
   if (error) throw new Error(`Failed to clean up test receipts: ${error.message}`);
 }
+
+/**
+ * Seeds a personal budget straight into the table.
+ *
+ * Personal on purpose (`household_id` null): the fixture account's household
+ * membership is not something a spec should depend on, and `/budgets` only
+ * defaults to the household tab when there is one — `?scope=personal` plus a
+ * personal row is the same screen either way.
+ */
+export async function createTestBudget(
+  userId: string,
+  budget: { category: string | null; amount: number },
+): Promise<string> {
+  const { data, error } = await adminClient()
+    .from('budgets')
+    .insert({ user_id: userId, household_id: null, ...budget })
+    .select('id')
+    .single();
+
+  if (error || !data) throw new Error(`Failed to seed budget: ${error?.message}`);
+  return data.id as string;
+}
+
+/** Every budget this account could own is test data — wipe them all. */
+export async function deleteTestUserBudgets(userId: string): Promise<void> {
+  const { error } = await adminClient().from('budgets').delete().eq('user_id', userId);
+  if (error) throw new Error(`Failed to clean up test budgets: ${error.message}`);
+}
