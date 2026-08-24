@@ -16,8 +16,21 @@ const AMOUNT_GLOBAL = new RegExp(AMOUNT, 'g');
 /** The whole line is one figure, give or take a currency mark or a VAT letter. */
 const AMOUNT_ONLY = new RegExp(String.raw`^\W{0,3}(${AMOUNT})\s*[A-EȘ]?\.?$`);
 
-/** Says "this is the amount due". */
-const TOTAL_LABEL = /de\s*plat|\btotal\b|\bsuma\b/i;
+/**
+ * Says "this is the amount due".
+ *
+ * "total" carries no word boundary on purpose. A slip printed over a watermark
+ * comes back with the background text welded onto the label — Vision returned
+ * the line "TOTALimotnos daqil unde isi133.40b" from a real Kaufland receipt —
+ * and `\btotal\b` does not match that. Missing it left the slip with no
+ * labelled figure at all, which handed the answer to the largest-figure
+ * fallback below, which answered with the card balance (MAD-123).
+ *
+ * SUBTOTAL is the one word this opens the door to, and NOT_TOTAL_LABEL is
+ * tested first, so it stays shut. "suma" keeps its boundaries: unanchored it
+ * matches "consumator", which is printed on the back of every receipt.
+ */
+const TOTAL_LABEL = /de\s*plat|total|\bsuma\b/i;
 /**
  * Says "this is some other figure". Checked first, because most of these
  * contain the word the positive test is looking for: SUBTOTAL and TOTAL TVA
@@ -27,6 +40,13 @@ const TOTAL_LABEL = /de\s*plat|\btotal\b|\bsuma\b/i;
 const NOT_TOTAL_LABEL = /subtotal|\btva\b|\brest\b|bac[sș]i[sș]|discount|reducere|puncte|bonus/i;
 /** "DE PLATA" is what is actually owed, so it outranks a bare "TOTAL". */
 const DUE_LABEL = /de\s*plat/i;
+/**
+ * Figures that are never what the shop was paid. A card balance is printed by
+ * the terminal *after* the payment, and on a card with any money on it it
+ * dwarfs the bill — so the largest-figure fallback reaches for it every time.
+ * A 133,40 lei shop came back as 30 817,79, read off "Valoare card" (MAD-123).
+ */
+const NEVER_TOTAL_LABEL = /valoare\s*card|\bsold\b|disponibil|plafon|\blimit[ăa]\b/i;
 
 const DATE_LINE = /\bdat[ăa]\b/i;
 const DMY_DATE = /(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/g;
@@ -61,7 +81,7 @@ export function parseReceiptText(text: string): ParsedReceipt {
 
   return {
     merchant: findMerchant(lines, text),
-    amount: findAmount(lines, text),
+    amount: findAmount(lines),
     purchaseDate: findDate(lines, text),
   };
 }
@@ -151,7 +171,7 @@ function tidyMerchant(line: string): string {
  * receipts to hand and is wrong as soon as a total is not the biggest figure
  * printed.
  */
-function findAmount(lines: string[], fullText: string): number | null {
+function findAmount(lines: string[]): number | null {
   const candidates: { value: number; score: number }[] = [];
 
   const consider = (value: number | null, score: number) => {
@@ -180,11 +200,35 @@ function findAmount(lines: string[], fullText: string): number | null {
   // Nothing labelled. The largest figure is a guess, but a receipt's total is
   // usually its biggest number, and a wrong amount the user can see and edit
   // beats an empty one they have to work out themselves.
-  const amounts = [...fullText.matchAll(AMOUNT_GLOBAL)]
+  //
+  // Guessing across the whole slip is what made MAD-123 as wrong as it was, so
+  // the rows a balance label owns come out of the pool first. A balance is the
+  // one figure that beats the total by two orders of magnitude, which is the
+  // difference between an amount the reader corrects and one they do not
+  // believe came off their receipt at all.
+  const amounts = spendableLines(lines)
+    .flatMap((line) => [...line.matchAll(AMOUNT_GLOBAL)])
     .map((match) => parseAmount(match[0]))
     .filter((value): value is number => value !== null);
 
   return amounts.length ? Math.max(...amounts) : null;
+}
+
+/**
+ * The slip minus the rows a balance label owns.
+ *
+ * The same two-column flattening as everywhere else here splits the label from
+ * its figure — "Valoare card:" on one line and "30.817,79 RON" on the next — so
+ * a balance label carrying no figure of its own takes the line below it too.
+ * Only the one: what follows is the terminal's block rather than the shop's,
+ * and dropping further would start eating the receipt.
+ */
+function spendableLines(lines: string[]): string[] {
+  return lines.filter((line, index) => {
+    if (NEVER_TOTAL_LABEL.test(line)) return false;
+    const previous = index > 0 ? lines[index - 1] : '';
+    return !NEVER_TOTAL_LABEL.test(previous) || previous.match(AMOUNT_GLOBAL) !== null;
+  });
 }
 
 /** The figure sitting at this label's offset within the next run of figures. */
