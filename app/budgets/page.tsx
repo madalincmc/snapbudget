@@ -16,6 +16,18 @@ import {
 import { BudgetBar, BUDGET_TEXT_CLASS } from '@/components/budget-bar';
 import { PageHeader } from '@/components/page-header';
 import { BottomNav } from '@/components/bottom-nav';
+import { EditBudgetDialog } from '@/components/edit-budget-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -139,17 +151,37 @@ export default async function BudgetsPage({
                       din {overview.overall.budget.amount.toFixed(2)} lei
                     </span>
                   </span>
-                  <form action={deleteBudget.bind(null, overview.overall.budget.id)}>
-                    <Button
-                      type="submit"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 focus-visible:text-destructive"
-                    >
-                      <Trash2 />
-                      <span className="sr-only">Șterge bugetul total</span>
-                    </Button>
-                  </form>
+                  <AlertDialog>
+                    <AlertDialogTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 focus-visible:text-destructive"
+                        >
+                          <Trash2 />
+                          <span className="sr-only">Șterge bugetul total</span>
+                        </Button>
+                      }
+                    />
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Ștergi bugetul total?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Limita de {overview.overall.budget.amount.toFixed(0)} lei dispare de aici
+                          și de pe dashboard. Cheltuielile rămân neatinse.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Anulează</AlertDialogCancel>
+                        <form action={deleteBudget.bind(null, overview.overall.budget.id)}>
+                          <AlertDialogAction type="submit" variant="destructive">
+                            Șterge
+                          </AlertDialogAction>
+                        </form>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
                 <BudgetBar
                   percentUsed={overview.overall.percentUsed}
@@ -242,17 +274,45 @@ export default async function BudgetsPage({
                           <span className="text-muted-foreground text-sm tabular-nums">
                             {progress.spent.toFixed(0)} / {progress.budget.amount.toFixed(0)} lei
                           </span>
-                          <form action={deleteBudget.bind(null, progress.budget.id)}>
-                            <Button
-                              type="submit"
-                              variant="ghost"
-                              size="icon-sm"
-                              className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 focus-visible:text-destructive"
-                            >
-                              <Trash2 />
-                              <span className="sr-only">Șterge limita pentru {category}</span>
-                            </Button>
-                          </form>
+                          <EditBudgetDialog
+                            budgetId={progress.budget.id}
+                            category={category}
+                            amount={progress.budget.amount}
+                            spent={progress.spent}
+                          />
+                          <AlertDialog>
+                            <AlertDialogTrigger
+                              render={
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 focus-visible:text-destructive"
+                                >
+                                  <Trash2 />
+                                  <span className="sr-only">Șterge limita pentru {category}</span>
+                                </Button>
+                              }
+                            />
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Ștergi limita pentru {category}?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Categoria nu mai e urmărită față de o limită. Cheltuielile rămân
+                                  neatinse, iar limita se poate pune la loc oricând.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Anulează</AlertDialogCancel>
+                                <form action={deleteBudget.bind(null, progress.budget.id)}>
+                                  <AlertDialogAction type="submit" variant="destructive">
+                                    Șterge
+                                  </AlertDialogAction>
+                                </form>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                       <BudgetBar percentUsed={progress.percentUsed} status={progress.status} />

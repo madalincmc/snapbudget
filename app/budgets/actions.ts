@@ -110,3 +110,31 @@ export async function deleteBudget(id: string) {
 
   revalidateBudgets();
 }
+
+/**
+ * Changes the amount on one budget that already exists, named by id.
+ *
+ * Separate from `saveBudget` for two reasons. Editing needs none of the
+ * scope/category resolution that creating does — the row already knows which
+ * pair it belongs to, and re-deriving it from the form would let a client move
+ * a limit to another scope by editing its amount. And it must not redirect:
+ * the edit dialog lives on /budgets itself, so it waits on this promise to
+ * close, which a `redirect()` (thrown control flow) never lets resolve.
+ *
+ * As with `deleteBudget`, RLS decides whether this row is the caller's to
+ * change: personal budgets are creator-only, household ones are editable by
+ * any member.
+ */
+export async function updateBudgetAmount(id: string, formData: FormData) {
+  const { supabase } = await requireUser();
+
+  const amount = parseAmount(formData);
+
+  const { error } = await supabase.from('budgets').update({ amount }).eq('id', id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidateBudgets();
+}
