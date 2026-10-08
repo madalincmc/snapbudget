@@ -1,7 +1,7 @@
 'use client';
 
 import type * as React from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { CATEGORY_BAR_CLASS, type Category } from '@/lib/categories';
@@ -9,12 +9,14 @@ import { BUDGET_TEXT_CLASS } from '@/components/budget-bar';
 import { cn } from '@/lib/utils';
 import { money } from '@/lib/dashboard/format';
 import type { BudgetProgress } from '@/lib/budgets';
-import type { CategoryTotal } from '@/lib/dashboard/aggregate';
+import type { CategoryTotal, SubcategoryTotal } from '@/lib/dashboard/aggregate';
 
 /** Categories shown before the list collapses; the rest sit behind a disclosure. */
 const VISIBLE_COUNT = 5;
 /** Segments the composition bar carries before the tail is rolled up. */
 const SEGMENT_COUNT = 6;
+/** Per-viewer memory of the subcategory toggle — a convenience, never state. */
+const SUBCATEGORY_PREF_KEY = 'sb:breakdown-subcategories';
 
 interface Slice {
   category: Category;
@@ -76,12 +78,59 @@ function CompositionBar({
   );
 }
 
+/**
+ * The category's spend split by what was bought, under its row.
+ *
+ * Shares are of the category, not of the month: the question this answers is
+ * "what was the food money spent on", and the month share is already on the
+ * row above.
+ */
+function SubcategoryList({
+  category,
+  total,
+  parts,
+}: {
+  category: Category;
+  total: number;
+  parts: SubcategoryTotal[];
+}) {
+  return (
+    <ul
+      aria-label={`Subcategorii ${category}`}
+      className="border-muted flex flex-col gap-1 border-l-2 pt-0.5 pl-3"
+    >
+      {parts.map(({ subcategory, total: partTotal }) => (
+        <li key={subcategory ?? '∅'} className="flex items-baseline justify-between gap-2 text-xs">
+          <span
+            className={cn(
+              'min-w-0 truncate',
+              subcategory ? 'text-muted-foreground' : 'text-muted-foreground/60 italic',
+            )}
+          >
+            {subcategory ?? 'Fără subcategorie'}
+          </span>
+          <span className="flex flex-none items-baseline gap-2 tabular-nums">
+            <span className="text-muted-foreground/70">
+              {total > 0 ? Math.round((partTotal / total) * 100) : 0}%
+            </span>
+            <span className="text-foreground/90">
+              {money(partTotal)}
+              <span className="text-muted-foreground/70"> lei</span>
+            </span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function CategoryRow({
   category,
   total,
   share,
   max,
   budget,
+  subcategories,
   active,
   dimmed,
   onActivate,
@@ -97,6 +146,8 @@ function CategoryRow({
   dimmed: boolean;
   onActivate: (category: Category | null) => void;
   delay: number;
+  /** Shown under the row when set; left out when the toggle is off. */
+  subcategories?: SubcategoryTotal[];
   /**
    * Set makes the row open that category's screen; absent leaves it inert.
    *
@@ -198,6 +249,12 @@ function CategoryRow({
           </span>
         </p>
       )}
+
+      {/* Only worth a list when at least one row was actually labelled — a lone
+          "Fără subcategorie" would repeat the category total in grey. */}
+      {subcategories && subcategories.some((s) => s.subcategory !== null) && (
+        <SubcategoryList category={category} total={total} parts={subcategories} />
+      )}
     </>
   );
 
@@ -213,9 +270,12 @@ function CategoryRow({
 export function CategoryBreakdown({
   categoryTotals,
   budgets = {},
+  subcategoryTotals,
   categoryHrefs = {},
 }: {
   categoryTotals: CategoryTotal[];
+  /** Absent hides the toggle — nothing to split by. */
+  subcategoryTotals?: Partial<Record<Category, SubcategoryTotal[]>>;
   budgets?: Partial<Record<Category, BudgetProgress>>;
   /**
    * Per-category destinations, prebuilt on the server. A function that maps a
@@ -228,6 +288,31 @@ export function CategoryBreakdown({
   categoryHrefs?: Partial<Record<Category, string>>;
 }) {
   const [active, setActive] = useState<Category | null>(null);
+  const [showSubcategories, setShowSubcategories] = useState(false);
+
+  // Read after mount rather than in the initialiser: the server renders the
+  // collapsed list, and starting from storage would mismatch on hydration.
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (localStorage.getItem(SUBCATEGORY_PREF_KEY) === '1') setShowSubcategories(true);
+    } catch {
+      // Storage blocked — the toggle still works, it just won't be remembered.
+    }
+  }, []);
+
+  const toggleSubcategories = () => {
+    const next = !showSubcategories;
+    setShowSubcategories(next);
+    try {
+      localStorage.setItem(SUBCATEGORY_PREF_KEY, next ? '1' : '0');
+    } catch {
+      // See above.
+    }
+  };
+
+  const partsOf = (category: Category) =>
+    showSubcategories ? subcategoryTotals?.[category] : undefined;
 
   const withSpending = categoryTotals.filter((c) => c.total > 0).sort((a, b) => b.total - a.total);
   const max = Math.max(...withSpending.map((c) => c.total), 0);
@@ -279,6 +364,22 @@ export function CategoryBreakdown({
             onActivate={setActive}
           />
 
+          {subcategoryTotals && (
+            <button
+              type="button"
+              onClick={toggleSubcategories}
+              aria-pressed={showSubcategories}
+              className={cn(
+                'sb-press -my-1 self-start rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors',
+                showSubcategories
+                  ? 'bg-foreground text-background border-foreground'
+                  : 'text-muted-foreground hover:text-foreground border-border',
+              )}
+            >
+              Pe subcategorii
+            </button>
+          )}
+
           <div className="flex flex-col gap-3">
             {visible.map(({ category, total: categoryTotal }, index) => (
               <CategoryRow
@@ -293,6 +394,7 @@ export function CategoryBreakdown({
                 onActivate={setActive}
                 delay={index * 50}
                 href={categoryHrefs[category]}
+                subcategories={partsOf(category)}
               />
             ))}
 
@@ -323,6 +425,7 @@ export function CategoryBreakdown({
                       onActivate={setActive}
                       delay={index * 50}
                       href={categoryHrefs[category]}
+                      subcategories={partsOf(category)}
                     />
                   ))}
                 </div>

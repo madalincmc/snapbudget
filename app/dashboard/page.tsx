@@ -186,6 +186,7 @@ export default async function DashboardPage({
   const {
     total: monthTotal,
     categoryTotals,
+    subcategoryTotals,
     comparison,
     topCategory,
     biggestExpense,
@@ -275,6 +276,7 @@ export default async function DashboardPage({
               <CardContent>
                 <CategoryBreakdown
                   categoryTotals={categoryTotals}
+                  subcategoryTotals={subcategoryTotals}
                   budgets={budgetOverview.byCategory}
                   categoryHrefs={categoryHrefs}
                 />

@@ -1,4 +1,4 @@
-import { CATEGORIES, isCategory, type Category } from '@/lib/categories';
+import { CATEGORIES, isCategory, isSubcategoryOf, type Category } from '@/lib/categories';
 
 export interface ReceiptRow {
   id: string;
@@ -15,6 +15,12 @@ export interface ReceiptRow {
 
 export interface CategoryTotal {
   category: Category;
+  total: number;
+}
+
+/** One subcategory's spend; `subcategory` null collects the rows with none. */
+export interface SubcategoryTotal {
+  subcategory: string | null;
   total: number;
 }
 
@@ -40,6 +46,8 @@ export interface DailySpend {
 export interface DashboardData {
   total: number;
   categoryTotals: CategoryTotal[];
+  /** Per category, its subcategories with spending, largest first. */
+  subcategoryTotals: Record<Category, SubcategoryTotal[]>;
   comparison: MonthComparison;
   topCategory: CategoryTotal | null;
   biggestExpense: BiggestExpense | null;
@@ -336,6 +344,8 @@ export function buildPeriodData(receipts: ReceiptRow[], period: DashboardPeriod)
     total: totals.get(category) ?? 0,
   }));
 
+  const subcategoryTotals = buildSubcategoryTotals(current);
+
   const topCategory = categoryTotals.reduce<CategoryTotal | null>((top, c) => {
     if (c.total <= 0) return top;
     if (!top || c.total > top.total) return c;
@@ -353,6 +363,7 @@ export function buildPeriodData(receipts: ReceiptRow[], period: DashboardPeriod)
   return {
     total,
     categoryTotals,
+    subcategoryTotals,
     comparison: {
       currentTotal: total,
       previousTotal,
@@ -366,6 +377,42 @@ export function buildPeriodData(receipts: ReceiptRow[], period: DashboardPeriod)
     dailyTrend: trendOverDays(receipts, period.trendDays),
     isLive: period.isLive,
   };
+}
+
+/**
+ * Spending split by subcategory inside each category, largest first.
+ *
+ * A subcategory that no longer belongs to the row's category — or a row that
+ * never had one — lands in the null bucket, so the parts always add up to the
+ * category total the row above them shows.
+ */
+export function buildSubcategoryTotals(
+  receipts: ReceiptRow[],
+): Record<Category, SubcategoryTotal[]> {
+  const byCategory = new Map<Category, Map<string | null, number>>(
+    CATEGORIES.map((category) => [category, new Map()]),
+  );
+
+  for (const r of receipts) {
+    const category = receiptCategory(r);
+    const subcategory = isSubcategoryOf(category, r.subcategory) ? r.subcategory : null;
+    const totals = byCategory.get(category)!;
+    totals.set(subcategory, (totals.get(subcategory) ?? 0) + (r.amount ?? 0));
+  }
+
+  return Object.fromEntries(
+    CATEGORIES.map((category) => [
+      category,
+      [...byCategory.get(category)!]
+        .map(([subcategory, total]) => ({ subcategory, total }))
+        .filter((s) => s.total > 0)
+        // The unlabelled bucket goes last whatever its size: it is the
+        // remainder, not a peer of the named ones.
+        .sort((a, b) =>
+          a.subcategory === null ? 1 : b.subcategory === null ? -1 : b.total - a.total,
+        ),
+    ]),
+  ) as Record<Category, SubcategoryTotal[]>;
 }
 
 /** Zero-filled totals for exactly these days, in the order given. */

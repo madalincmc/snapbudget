@@ -1,7 +1,8 @@
 /**
  * Main categories drive dashboard charts and OCR categorization.
- * Subcategories are optional, finer-grained detail shown in lists/detail
- * views only — never charted separately (see MAD-60).
+ * Subcategories are optional, finer-grained detail: shown in lists/detail
+ * views and as an opt-in split under each dashboard breakdown row, but never
+ * given their own chart segments (see MAD-60).
  */
 export const CATEGORIES = [
   'Mâncare & Băutură',
