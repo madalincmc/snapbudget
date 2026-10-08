@@ -67,6 +67,7 @@ export default async function DemoDashboardPage({
 
   const {
     categoryTotals,
+    subcategoryTotals,
     comparison,
     topCategory,
     biggestExpense,
@@ -138,6 +139,7 @@ export default async function DemoDashboardPage({
           <CardContent>
             <CategoryBreakdown
               categoryTotals={categoryTotals}
+              subcategoryTotals={subcategoryTotals}
               budgets={budgetOverview.byCategory}
             />
           </CardContent>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildSubcategoryTotals,
   buildDailyTrend,
   buildDashboardData,
   dashboardRange,
@@ -292,5 +293,38 @@ describe('dashboardRange', () => {
     const { from, to } = dashboardRange('2026-01', now);
     expect(toDateString(from)).toBe('2025-12-01');
     expect(toDateString(to)).toBe('2026-02-01');
+  });
+});
+
+describe('buildSubcategoryTotals', () => {
+  const row = (category: string, subcategory: string | null, amount: number): ReceiptRow => ({
+    id: `${category}-${subcategory}-${amount}`,
+    user_id: 'u',
+    merchant: 'M',
+    amount,
+    purchase_date: '2026-08-10',
+    category,
+    subcategory,
+    status: 'processed',
+    source: 'manual',
+    created_at: '2026-08-10T10:00:00Z',
+  });
+
+  it('splits a category by subcategory, largest first, unlabelled last', () => {
+    const totals = buildSubcategoryTotals([
+      row('Mâncare & Băutură', 'Restaurante', 50),
+      row('Mâncare & Băutură', 'Alimente', 120),
+      row('Mâncare & Băutură', 'Alimente', 30),
+      row('Mâncare & Băutură', null, 500),
+      // Belongs to another category — counted as unlabelled, not dropped.
+      row('Mâncare & Băutură', 'Combustibil', 10),
+    ]);
+
+    expect(totals['Mâncare & Băutură']).toEqual([
+      { subcategory: 'Alimente', total: 150 },
+      { subcategory: 'Restaurante', total: 50 },
+      { subcategory: null, total: 510 },
+    ]);
+    expect(totals.Transport).toEqual([]);
   });
 });
