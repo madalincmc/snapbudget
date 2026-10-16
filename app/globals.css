@@ -398,6 +398,24 @@
   --glow-b: oklch(0.45 0.1 340 / 0.18);
 }
 
+/* Scan button size (MAD-147). The root carries the choice as an attribute,
+   written before first paint; the button reads only these two variables, so
+   its markup is the same whatever the size. */
+:root {
+  --scan-fab-size: 3.5rem;
+  --scan-fab-icon: 1.5rem;
+}
+
+:root[data-scan-size='small'] {
+  --scan-fab-size: 3rem;
+  --scan-fab-icon: 1.25rem;
+}
+
+:root[data-scan-size='large'] {
+  --scan-fab-size: 4.25rem;
+  --scan-fab-icon: 1.875rem;
+}
+
 /* ==========================================================================
  * Motion
  *

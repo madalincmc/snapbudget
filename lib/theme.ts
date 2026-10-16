@@ -1,3 +1,5 @@
+import { SCAN_BUTTON_INIT_FRAGMENT } from '@/lib/scan-button';
+
 /**
  * Appearance is two independent choices.
  *
@@ -91,7 +93,8 @@ export function isPaletteId(value: unknown): value is PaletteId {
  * never appears in the wrong theme and then corrects itself. It writes three
  * attributes the rest of the app reads: the resolved mode that CSS matches on,
  * the raw preference that the mode control's icon is selected by, and the
- * palette. Having the preference in the DOM is what lets the appearance
+ * palette — plus the scan button's size and position (see lib/scan-button.ts).
+ * Having the preference in the DOM is what lets the appearance
  * controls render correctly on the server with no hydration mismatch.
  *
  * Kept as a string, and deliberately ES5-ish: it is injected verbatim and is
@@ -110,4 +113,5 @@ var e=document.documentElement;
 e.setAttribute('data-theme',d?'dark':'light');
 e.setAttribute('data-theme-pref',p);
 e.setAttribute('data-palette',pal);
+${SCAN_BUTTON_INIT_FRAGMENT}
 }catch(err){}})()`;

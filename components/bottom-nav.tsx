@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Camera, House, History, Lightbulb, Users } from 'lucide-react';
+import { House, History, Lightbulb, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ScanButton } from '@/components/scan-button';
 
 const APP_TABS = [
   { href: '/dashboard', label: 'Acasă', icon: House },
@@ -29,7 +30,8 @@ const DEMO_TABS = [
  *
  * The scan action rides above the bar as a floating button: it is the app's
  * core promise, so it stays one tap from anywhere instead of occupying the top
- * of the dashboard ahead of the data.
+ * of the dashboard ahead of the data. Its size and position are the user's to
+ * choose (see components/scan-button.tsx).
  */
 export function BottomNav({ variant = 'app' }: { variant?: 'app' | 'demo' }) {
   const pathname = usePathname();
@@ -101,24 +103,12 @@ export function BottomNav({ variant = 'app' }: { variant?: 'app' | 'demo' }) {
         </div>
       </nav>
 
-      <Link
+      <ScanButton
         // Scanning a receipt needs an account and an OCR call, so in the demo
         // the button leads to the one place that can give you both.
         href={demo ? '/login' : '/receipts/new'}
-        aria-label={demo ? 'Adaugă bon — creează-ți cont' : 'Adaugă bon'}
-        style={{ viewTransitionName: 'scan-button' }}
-        className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring/50 shadow-primary/30 group/scan fixed right-[max(1rem,calc(50%-16rem+1rem))] bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg transition-all duration-200 hover:shadow-xl focus-visible:ring-3 focus-visible:outline-none active:translate-y-px active:scale-90"
-      >
-        {/* A halo that only appears on hover or focus. Deliberately not a
-            permanent pulse: this button is on every screen in the app, and
-            something that moves forever in the corner of every screen stops
-            being an invitation and becomes a distraction. */}
-        <span
-          aria-hidden
-          className="bg-primary/25 absolute inset-0 -z-10 scale-100 rounded-2xl opacity-0 transition-all duration-300 group-hover/scan:scale-125 group-hover/scan:opacity-100 group-focus-visible/scan:scale-125 group-focus-visible/scan:opacity-100"
-        />
-        <Camera className="h-6 w-6 transition-transform duration-300 group-hover/scan:scale-110" />
-      </Link>
+        label={demo ? 'Adaugă bon — creează-ți cont' : 'Adaugă bon'}
+      />
     </>
   );
 }

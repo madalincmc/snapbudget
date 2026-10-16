@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Check, Monitor, Moon, Palette, Sun } from 'lucide-react';
+import { Check, Monitor, Moon, Palette, RotateCcw, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,17 @@ import {
   type PaletteId,
   type ThemePreference,
 } from '@/lib/theme';
+import {
+  applyScanPosition,
+  DEFAULT_SCAN_SIZE,
+  hasCustomScanPosition,
+  isScanButtonSize,
+  SCAN_POSITION_STORAGE_KEY,
+  SCAN_SIZE_LABEL,
+  SCAN_SIZE_ORDER,
+  SCAN_SIZE_STORAGE_KEY,
+  type ScanButtonSize,
+} from '@/lib/scan-button';
 
 const MODE_ICON = { system: Monitor, light: Sun, dark: Moon } as const;
 
@@ -30,6 +41,18 @@ function currentPalette(): PaletteId {
   const value = document.documentElement.getAttribute('data-palette');
   return isPaletteId(value) ? value : DEFAULT_PALETTE;
 }
+
+function currentScanSize(): ScanButtonSize {
+  const value = document.documentElement.getAttribute('data-scan-size');
+  return isScanButtonSize(value) ? value : DEFAULT_SCAN_SIZE;
+}
+
+/** The size picker's own glyph: a rounded square at that size's share of the cell. */
+const SCAN_SIZE_GLYPH: Record<ScanButtonSize, string> = {
+  small: 'h-2 w-2',
+  medium: 'h-2.5 w-2.5',
+  large: 'h-3.5 w-3.5 rounded-[4px]',
+};
 
 function resolve(preference: ThemePreference): 'light' | 'dark' {
   const dark =
@@ -51,7 +74,7 @@ function withWash(apply: () => void) {
 }
 
 /**
- * Mode and palette in one popover.
+ * Mode, palette and the scan button's size in one popover.
  *
  * Both live on the <html> element, written by the inline script before the
  * first paint; this component reads them from there rather than holding React
@@ -106,8 +129,30 @@ export function AppearanceMenu() {
     bump((n) => n + 1);
   }
 
+  function setScanSize(size: ScanButtonSize) {
+    try {
+      localStorage.setItem(SCAN_SIZE_STORAGE_KEY, size);
+    } catch {
+      // As above.
+    }
+    document.documentElement.setAttribute('data-scan-size', size);
+    bump((n) => n + 1);
+  }
+
+  function resetScanPosition() {
+    try {
+      localStorage.removeItem(SCAN_POSITION_STORAGE_KEY);
+    } catch {
+      // As above.
+    }
+    applyScanPosition(null);
+    bump((n) => n + 1);
+  }
+
   const activePreference = typeof document === 'undefined' ? 'system' : currentPreference();
   const activePalette = typeof document === 'undefined' ? DEFAULT_PALETTE : currentPalette();
+  const activeScanSize = typeof document === 'undefined' ? DEFAULT_SCAN_SIZE : currentScanSize();
+  const scanMoved = typeof document !== 'undefined' && hasCustomScanPosition();
 
   return (
     <Popover>
@@ -204,6 +249,53 @@ export function AppearanceMenu() {
                 </button>
               );
             })}
+          </div>
+        </section>
+
+        <section className="flex flex-col gap-1.5">
+          <h3 className="text-muted-foreground px-0.5 text-[11px] font-medium tracking-wide uppercase">
+            Buton de scanare
+          </h3>
+          <div className="bg-muted flex gap-1 rounded-full p-1">
+            {SCAN_SIZE_ORDER.map((size) => {
+              const active = size === activeScanSize;
+              return (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => setScanSize(size)}
+                  aria-pressed={active}
+                  className={cn(
+                    'flex flex-1 items-center justify-center gap-1.5 rounded-full py-1.5 text-xs font-medium transition-all duration-200',
+                    active
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <span
+                    aria-hidden
+                    className={cn('bg-primary rounded-[3px]', SCAN_SIZE_GLYPH[size])}
+                  />
+                  {SCAN_SIZE_LABEL[size]}
+                </button>
+              );
+            })}
+          </div>
+          {/* Moving it is a long press on the button itself — said here,
+              because a gesture with no visible affordance is otherwise only
+              ever found by accident. */}
+          <div className="flex items-center justify-between gap-2 px-0.5">
+            <p className="text-muted-foreground text-[11px]">Ține apăsat pe buton ca să-l muți.</p>
+            {scanMoved && (
+              <button
+                type="button"
+                onClick={resetScanPosition}
+                className="text-primary hover:text-primary/80 flex flex-none items-center gap-1 text-[11px] font-medium"
+              >
+                <RotateCcw className="h-3 w-3" />
+                Resetează poziția
+              </button>
+            )}
           </div>
         </section>
       </PopoverContent>
