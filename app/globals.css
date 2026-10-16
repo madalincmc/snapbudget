@@ -59,8 +59,6 @@
 
   /* Category identity. `-ink` is the same hue re-stepped to clear 4.5:1 as
      text on its surface; the plain token is the mark colour. */
-  --color-cat-food: var(--cat-food);
-  --color-cat-food-ink: var(--cat-food-ink);
   --color-cat-transport: var(--cat-transport);
   --color-cat-transport-ink: var(--cat-transport-ink);
   --color-cat-home: var(--cat-home);
@@ -97,7 +95,7 @@
  *
  * Category hues encode identity: a reader who learned that Transport is orange
  * must not have it repainted because they switched accent colour. Every hue
- * and its `-ink` step is checked with the palette validator — the eight carry
+ * and its `-ink` step is checked with the palette validator — the seven carry
  * ΔE 12.9 (light) / 10.5 (dark) on the worst adjacent pair under deuteranopia,
  * and every `-ink` clears 4.5:1 as text on its own surface.
  *
@@ -119,8 +117,6 @@
   --danger: oklch(0.58 0.2 25);
   --danger-ink: oklch(0.53 0.2 25);
 
-  --cat-food: oklch(0.575 0.163 255.5);
-  --cat-food-ink: oklch(0.555 0.163 255.5);
   --cat-transport: oklch(0.671 0.175 40.6);
   --cat-transport-ink: oklch(0.581 0.175 40.6);
   --cat-home: oklch(0.61 0.104 212.7);
@@ -149,8 +145,6 @@
   --danger: oklch(0.66 0.19 25);
   --danger-ink: oklch(0.74 0.159 25);
 
-  --cat-food: oklch(0.622 0.161 255.1);
-  --cat-food-ink: oklch(0.622 0.161 255.1);
   --cat-transport: oklch(0.622 0.173 40.1);
   --cat-transport-ink: oklch(0.632 0.173 40.1);
   --cat-home: oklch(0.658 0.111 211.3);

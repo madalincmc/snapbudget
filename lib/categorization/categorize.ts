@@ -9,25 +9,26 @@ interface Rule {
 // Ordered rules, first match wins. Keep more specific patterns above more
 // generic ones (e.g. a supermarket chain before a bare "market").
 const RULES: Rule[] = [
-  // Mâncare & Băutură
+  // Food is split by the kind of spending (MAD-148). Kept at the top: "Bolt
+  // Food" has to match delivery before the ridesharing rule sees "Bolt".
   {
-    category: 'Mâncare & Băutură',
+    category: 'Divertisment & Ieșiri',
     subcategory: 'Livrare mâncare',
     pattern: /glovo|tazz|bolt\s?food/i,
   },
   {
-    category: 'Mâncare & Băutură',
+    category: 'Divertisment & Ieșiri',
     subcategory: 'Cafea & Gustări',
     pattern: /starbucks|5\s?to\s?go|cafenea|\bcoffee\b/i,
   },
   {
-    category: 'Mâncare & Băutură',
+    category: 'Divertisment & Ieșiri',
     subcategory: 'Restaurante',
     pattern: /restaurant|pizza|\bkfc\b|mcdonald|shaorma/i,
   },
   {
-    category: 'Mâncare & Băutură',
-    subcategory: 'Alimente',
+    category: 'Cumpărături',
+    subcategory: 'Supermarket & Piață',
     pattern: /kaufland|lidl|mega\s?image|carrefour|profi|auchan|penny|\bmetro\b|\bcora\b/i,
   },
 
@@ -134,24 +135,24 @@ const RULES: Rule[] = [
     pattern: /udemy|coursera|\bcurs\b|libr[aă]rie|c[aă]rt[uă]re[sș]ti/i,
   },
 
-  // Divertisment — named for what is bought, not for the fact that it recurs.
+  // Divertisment & Ieșiri — named for what is bought, not for the fact that it recurs.
   {
-    category: 'Divertisment',
+    category: 'Divertisment & Ieșiri',
     subcategory: 'Streaming & Media',
     pattern: /netflix|spotify|hbo\s?max|disney|youtube\s?premium/i,
   },
   {
-    category: 'Divertisment',
+    category: 'Divertisment & Ieșiri',
     subcategory: 'Filme & Jocuri',
     pattern: /cinema\s?city|playstation|\bsteam\b|\bxbox\b/i,
   },
   {
-    category: 'Divertisment',
+    category: 'Divertisment & Ieșiri',
     subcategory: 'Călătorii & Cazare',
     pattern: /booking|airbnb|wizz\s?air|\btarom\b|blue\s?air/i,
   },
   {
-    category: 'Divertisment',
+    category: 'Divertisment & Ieșiri',
     subcategory: 'Ieșiri & Evenimente',
     pattern: /iabilet|eventim|bilete\.ro|festival/i,
   },

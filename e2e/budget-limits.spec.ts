@@ -19,7 +19,7 @@ import { ensureTestUser, signIn, createTestBudget, deleteTestUserBudgets } from 
 test.describe('per-category budget limits', () => {
   let userId: string;
 
-  const CATEGORY = 'Divertisment';
+  const CATEGORY = 'Divertisment & Ieșiri';
 
   test.beforeAll(async () => {
     userId = await ensureTestUser();

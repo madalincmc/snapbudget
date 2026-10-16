@@ -242,7 +242,7 @@ describe('buildDailyTrend on a filtered set', () => {
   const rows = [
     expense({ amount: 100, category: 'Transport', purchase_date: '2026-08-03' }),
     expense({ amount: 40, category: 'Transport', purchase_date: '2026-08-03' }),
-    expense({ amount: 25, category: 'Mâncare & Băutură', purchase_date: '2026-08-03' }),
+    expense({ amount: 25, category: 'Cumpărături', purchase_date: '2026-08-03' }),
     // Outside the month, inside the trailing 30-day window the live month charts.
     expense({ amount: 60, category: 'Transport', purchase_date: '2026-07-20' }),
   ];
@@ -312,17 +312,17 @@ describe('buildSubcategoryTotals', () => {
 
   it('splits a category by subcategory, largest first, unlabelled last', () => {
     const totals = buildSubcategoryTotals([
-      row('Mâncare & Băutură', 'Restaurante', 50),
-      row('Mâncare & Băutură', 'Alimente', 120),
-      row('Mâncare & Băutură', 'Alimente', 30),
-      row('Mâncare & Băutură', null, 500),
+      row('Cumpărături', 'Electronice', 50),
+      row('Cumpărături', 'Supermarket & Piață', 120),
+      row('Cumpărături', 'Supermarket & Piață', 30),
+      row('Cumpărături', null, 500),
       // Belongs to another category — counted as unlabelled, not dropped.
-      row('Mâncare & Băutură', 'Combustibil', 10),
+      row('Cumpărături', 'Combustibil', 10),
     ]);
 
-    expect(totals['Mâncare & Băutură']).toEqual([
-      { subcategory: 'Alimente', total: 150 },
-      { subcategory: 'Restaurante', total: 50 },
+    expect(totals['Cumpărături']).toEqual([
+      { subcategory: 'Supermarket & Piață', total: 150 },
+      { subcategory: 'Electronice', total: 50 },
       { subcategory: null, total: 510 },
     ]);
     expect(totals.Transport).toEqual([]);

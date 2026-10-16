@@ -156,14 +156,14 @@ describe('demoHistoryPage', () => {
   it('combines filters rather than letting the last one win', () => {
     const page = demoHistoryPage(rows, {
       who: DEMO_ANA,
-      category: 'Mâncare & Băutură',
+      category: 'Cumpărături',
       sort: 'amount_desc',
     });
 
     expect(page.receipts.length).toBeGreaterThan(0);
     for (const r of page.receipts) {
       expect(r.user_id).toBe(DEMO_ANA);
-      expect(r.category).toBe('Mâncare & Băutură');
+      expect(r.category).toBe('Cumpărături');
     }
   });
 

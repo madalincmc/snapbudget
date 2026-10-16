@@ -28,7 +28,7 @@ describe('categoryFromToken', () => {
 describe('view paths', () => {
   it('addresses a category by token', () => {
     expect(categoryPath('Transport')).toBe('/categories/transport');
-    expect(categoryPath('Mâncare & Băutură')).toBe('/categories/food');
+    expect(categoryPath('Divertisment & Ieșiri')).toBe('/categories/fun');
   });
 
   it('carries only the params that are not the default', () => {
@@ -45,7 +45,7 @@ describe('view paths', () => {
     // The two are a pair: a path this builds has to survive returnPathFor, or
     // saving a receipt opened from a category screen would land on /dashboard.
     const { returnPathFor } = await import('@/lib/receipts/return-path');
-    const path = categoryPath('Divertisment', { month: '2026-07', who: 'me' });
+    const path = categoryPath('Divertisment & Ieșiri', { month: '2026-07', who: 'me' });
     expect(returnPathFor(path)).toBe(path);
   });
 });

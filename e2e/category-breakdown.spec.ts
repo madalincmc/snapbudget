@@ -16,13 +16,13 @@ test.describe('category breakdown', () => {
   // Descending, so the order on the dashboard is known: the last two fall
   // past VISIBLE_COUNT and end up inside the disclosure.
   const spending = [
-    { category: 'Mâncare & Băutură', amount: 700 },
+    { category: 'Financiar', amount: 700 },
     { category: 'Transport', amount: 600 },
     { category: 'Locuință & Facturi', amount: 500 },
     { category: 'Sănătate & Îngrijire', amount: 400 },
     { category: 'Cumpărături', amount: 300 },
     { category: 'Familie & Educație', amount: 200 },
-    { category: 'Divertisment', amount: 100 },
+    { category: 'Divertisment & Ieșiri', amount: 100 },
   ];
 
   test.beforeAll(async () => {
@@ -55,9 +55,9 @@ test.describe('category breakdown', () => {
 
     await signIn(page);
 
-    // Divertisment is seventh, so it is inside the disclosure and not yet
+    // Divertisment & Ieșiri is seventh, so it is inside the disclosure and not yet
     // rendered as a link.
-    const hiddenRow = page.getByRole('link', { name: 'Divertisment — vezi cheltuielile' });
+    const hiddenRow = page.getByRole('link', { name: 'Divertisment & Ieșiri — vezi cheltuielile' });
     await expect(hiddenRow).toBeHidden();
 
     await page.getByText('Încă 2 categorii').click();
@@ -65,6 +65,6 @@ test.describe('category breakdown', () => {
 
     await hiddenRow.click();
     await expect(page).toHaveURL(/\/categories\/fun/);
-    await expect(page.getByRole('heading', { name: 'Divertisment' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Divertisment & Ieșiri' })).toBeVisible();
   });
 });

@@ -152,7 +152,7 @@ try {
       user_id: alice.id,
       title: 'Netflix',
       amount: 55,
-      category: 'Divertisment',
+      category: 'Divertisment & Ieșiri',
       subcategory: 'Abonamente',
       frequency: 'monthly',
       start_date: dayOffset(0),
