@@ -102,7 +102,7 @@ describe('merchant categorization', () => {
   it('still reads Bolt Food as delivery rather than as a ride', () => {
     // Ordering guard: the food rule has to stay above the ridesharing one.
     expect(categorizeMerchant('Bolt Food')).toEqual({
-      category: 'Mâncare & Băutură',
+      category: 'Divertisment & Ieșiri',
       subcategory: 'Livrare mâncare',
     });
   });

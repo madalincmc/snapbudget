@@ -15,7 +15,7 @@ describe('returnPathFor', () => {
   });
 
   it('keeps a category screen addressed by a real token', () => {
-    expect(returnPathFor('/categories/food')).toBe('/categories/food');
+    expect(returnPathFor('/categories/shopping')).toBe('/categories/shopping');
     expect(returnPathFor('/categories/transport?month=2026-07')).toBe(
       '/categories/transport?month=2026-07',
     );
@@ -24,7 +24,7 @@ describe('returnPathFor', () => {
   it('rejects a category path that would 404', () => {
     expect(returnPathFor('/categories/groceries')).toBe('/dashboard');
     expect(returnPathFor('/categories')).toBe('/dashboard');
-    expect(returnPathFor('/categories/food/extra')).toBe('/dashboard');
+    expect(returnPathFor('/categories/shopping/extra')).toBe('/dashboard');
   });
 
   it('rejects anything that would leave the app', () => {

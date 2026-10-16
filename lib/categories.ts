@@ -5,13 +5,12 @@
  * given their own chart segments (see MAD-60).
  */
 export const CATEGORIES = [
-  'Mâncare & Băutură',
   'Transport',
   'Locuință & Facturi',
   'Sănătate & Îngrijire',
   'Cumpărături',
   'Familie & Educație',
-  'Divertisment',
+  'Divertisment & Ieșiri',
   'Financiar',
   'Altele',
 ] as const;
@@ -28,12 +27,16 @@ export type Category = (typeof CATEGORIES)[number];
  * property of the dwelling, so under a bare "Casă" it reads as misfiled — it
  * belongs there as a recurring bill, and the name has to say so.
  *
+ * Food is split by the kind of spending rather than gathered by what was
+ * eaten (MAD-148): the weekly shop is a purchase like any other, so it sits in
+ * Cumpărături; a restaurant, a coffee or a delivery is going out, so it sits
+ * in Divertisment & Ieșiri.
+ *
  * Cash withdrawals are deliberately absent: a withdrawal is a transfer, not
  * spending, and recording it counted the same money twice — once on the way
  * out of the account and again when the cash was actually spent.
  */
 export const SUBCATEGORIES: Record<Category, readonly string[]> = {
-  'Mâncare & Băutură': ['Alimente', 'Restaurante', 'Cafea & Gustări', 'Livrare mâncare'],
   Transport: [
     'Combustibil',
     'Transport public',
@@ -48,12 +51,21 @@ export const SUBCATEGORIES: Record<Category, readonly string[]> = {
     'Întreținere & Reparații',
   ],
   'Sănătate & Îngrijire': ['Farmacie', 'Medical', 'Sport & Fitness', 'Îngrijire personală'],
-  Cumpărături: ['Îmbrăcăminte & Încălțăminte', 'Electronice', 'Casă & Decor', 'Cadouri'],
+  Cumpărături: [
+    'Supermarket & Piață',
+    'Îmbrăcăminte & Încălțăminte',
+    'Electronice',
+    'Casă & Decor',
+    'Cadouri',
+  ],
   'Familie & Educație': ['Copii', 'Educație & Cursuri', 'Animale de companie'],
-  Divertisment: [
+  'Divertisment & Ieșiri': [
+    'Restaurante',
+    'Cafea & Gustări',
+    'Livrare mâncare',
+    'Ieșiri & Evenimente',
     'Streaming & Media',
     'Filme & Jocuri',
-    'Ieșiri & Evenimente',
     'Călătorii & Cazare',
   ],
   Financiar: [
@@ -78,15 +90,17 @@ export const SUBCATEGORIES: Record<Category, readonly string[]> = {
  * they encode which category this is — a reader who learned Transport is
  * orange must not have it repainted for choosing a different accent.
  *
- * The eight hues are validated as a categorical palette: worst adjacent pair
+ * The seven hues are validated as a categorical palette: worst adjacent pair
  * ΔE 12.9 light / 10.5 dark under deuteranopia (target ≥ 8), and every `-ink`
  * step clears 4.5:1 as text on its own surface. "Altele" is a residual bucket
- * rather than a spending identity, so it takes a neutral instead of a ninth
- * hue — which is also why the set stays inside the eight-slot ceiling.
+ * rather than a spending identity, so it takes a neutral instead of a hue of
+ * its own. (There were eight until MAD-148 dissolved "Mâncare & Băutură";
+ * dropping a hue cannot make an adjacent pair any closer, so the validation
+ * still holds.)
  */
 
 /**
- * Token stem per category — `--cat-food`, `--cat-food-ink`, `bg-cat-food`, …
+ * Token stem per category — `--cat-shopping`, `--cat-shopping-ink`, `bg-cat-shopping`, …
  *
  * The stems are deliberately short English words rather than slugs of the
  * labels, so renaming a category is a one-line change here: "Casă" became
@@ -94,13 +108,12 @@ export const SUBCATEGORIES: Record<Category, readonly string[]> = {
  * validated palette carried over untouched.
  */
 export const CATEGORY_TOKEN: Record<Category, string> = {
-  'Mâncare & Băutură': 'food',
   Transport: 'transport',
   'Locuință & Facturi': 'home',
   'Sănătate & Îngrijire': 'health',
   Cumpărături: 'shopping',
   'Familie & Educație': 'family',
-  Divertisment: 'fun',
+  'Divertisment & Ieșiri': 'fun',
   Financiar: 'finance',
   Altele: 'other',
 };
@@ -111,13 +124,12 @@ export const CATEGORY_TOKEN: Record<Category, string> = {
  * whose colour is chosen at runtime.
  */
 export const CATEGORY_VAR: Record<Category, string> = {
-  'Mâncare & Băutură': 'var(--cat-food)',
   Transport: 'var(--cat-transport)',
   'Locuință & Facturi': 'var(--cat-home)',
   'Sănătate & Îngrijire': 'var(--cat-health)',
   Cumpărături: 'var(--cat-shopping)',
   'Familie & Educație': 'var(--cat-family)',
-  Divertisment: 'var(--cat-fun)',
+  'Divertisment & Ieșiri': 'var(--cat-fun)',
   Financiar: 'var(--cat-finance)',
   Altele: 'var(--cat-other)',
 };
@@ -128,13 +140,12 @@ export const CATEGORY_VAR: Record<Category, string> = {
  * names, so an interpolated `bg-cat-${token}` would never be generated.
  */
 export const CATEGORY_BAR_CLASS: Record<Category, string> = {
-  'Mâncare & Băutură': 'bg-cat-food',
   Transport: 'bg-cat-transport',
   'Locuință & Facturi': 'bg-cat-home',
   'Sănătate & Îngrijire': 'bg-cat-health',
   Cumpărături: 'bg-cat-shopping',
   'Familie & Educație': 'bg-cat-family',
-  Divertisment: 'bg-cat-fun',
+  'Divertisment & Ieșiri': 'bg-cat-fun',
   Financiar: 'bg-cat-finance',
   Altele: 'bg-cat-other',
 };
@@ -144,13 +155,12 @@ export const CATEGORY_DOT_CLASS = CATEGORY_BAR_CLASS;
 
 /** SVG fill equivalents, for sparklines and chart marks. */
 export const CATEGORY_FILL_CLASS: Record<Category, string> = {
-  'Mâncare & Băutură': 'fill-cat-food',
   Transport: 'fill-cat-transport',
   'Locuință & Facturi': 'fill-cat-home',
   'Sănătate & Îngrijire': 'fill-cat-health',
   Cumpărături: 'fill-cat-shopping',
   'Familie & Educație': 'fill-cat-family',
-  Divertisment: 'fill-cat-fun',
+  'Divertisment & Ieșiri': 'fill-cat-fun',
   Financiar: 'fill-cat-finance',
   Altele: 'fill-cat-other',
 };
@@ -162,13 +172,12 @@ export const CATEGORY_FILL_CLASS: Record<Category, string> = {
  * are unreadable as letters.
  */
 export const CATEGORY_BADGE_CLASS: Record<Category, string> = {
-  'Mâncare & Băutură': 'bg-cat-food/12 text-cat-food-ink',
   Transport: 'bg-cat-transport/12 text-cat-transport-ink',
   'Locuință & Facturi': 'bg-cat-home/12 text-cat-home-ink',
   'Sănătate & Îngrijire': 'bg-cat-health/14 text-cat-health-ink',
   Cumpărături: 'bg-cat-shopping/14 text-cat-shopping-ink',
   'Familie & Educație': 'bg-cat-family/12 text-cat-family-ink',
-  Divertisment: 'bg-cat-fun/12 text-cat-fun-ink',
+  'Divertisment & Ieșiri': 'bg-cat-fun/12 text-cat-fun-ink',
   Financiar: 'bg-cat-finance/12 text-cat-finance-ink',
   Altele: 'bg-cat-other/15 text-cat-other-ink',
 };
@@ -180,7 +189,7 @@ export function isCategory(value: string | null): value is Category {
 /**
  * Reverse of CATEGORY_TOKEN, for the category screen's URL segment. The stems
  * are already short, ASCII and stable across renames, which is exactly what a
- * path needs — "Mâncare & Băutură" in a URL is neither.
+ * path needs — "Divertisment & Ieșiri" in a URL is neither.
  *
  * A Map rather than an object: the token comes off the URL, and a plain object
  * would answer `categoryFromToken('constructor')` with something truthy.
