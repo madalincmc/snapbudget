@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Camera, Repeat2, Users } from 'lucide-react';
-import { GoogleSignInButton } from '@/components/google-sign-in-button';
+import { LegalLinks } from '@/components/legal-page';
+import { LoginConsent } from '@/components/login-consent';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { delay } from '@/lib/utils';
@@ -66,7 +67,7 @@ export default async function LoginPage({
             )}
 
             <div className="sb-rise flex flex-col items-center gap-3" style={delay(400)}>
-              <GoogleSignInButton next={next ?? '/dashboard'} />
+              <LoginConsent next={next ?? '/dashboard'} />
               {/* Somewhere to go for anyone not ready to hand over an account
                   on the strength of three bullet points. */}
               <Link
@@ -78,6 +79,8 @@ export default async function LoginPage({
             </div>
           </CardContent>
         </Card>
+
+        <LegalLinks />
       </div>
     </div>
   );
