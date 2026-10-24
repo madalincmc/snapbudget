@@ -26,5 +26,17 @@ export async function GET(request: Request) {
     }
   }
 
+  // Sign-ups are switched off in Supabase Auth while the app is closed to new
+  // accounts. A Google account with no user behind it comes back here with
+  // this code instead of `code`, and deserves a different answer from "try
+  // again": trying again will never work.
+  // Older Auth servers send only the description, so both are checked.
+  if (
+    searchParams.get('error_code') === 'signup_disabled' ||
+    /signups not allowed/i.test(searchParams.get('error_description') ?? '')
+  ) {
+    return NextResponse.redirect(`${origin}/login?error=signup_closed`);
+  }
+
   return NextResponse.redirect(`${origin}/login?error=auth`);
 }

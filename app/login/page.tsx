@@ -58,12 +58,21 @@ export default async function LoginPage({
                 exchange fails. Without this the page renders identically to a
                 fresh visit, so a failed sign-in looks like a click that did
                 nothing — and the reader tries again rather than telling anyone. */}
-            {error && (
-              <Alert variant="destructive">
+            {error === 'signup_closed' ? (
+              <Alert>
                 <AlertDescription>
-                  Conectarea nu a reușit. Încearcă din nou — dacă se repetă, scrie-ne.
+                  Momentan nu acceptăm conturi noi. Dacă ai deja cont, conectează-te cu același cont
+                  Google. Până atunci, poți încerca demo-ul.
                 </AlertDescription>
               </Alert>
+            ) : (
+              error && (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    Conectarea nu a reușit. Încearcă din nou — dacă se repetă, scrie-ne.
+                  </AlertDescription>
+                </Alert>
+              )
             )}
 
             <div className="sb-rise flex flex-col items-center gap-3" style={delay(400)}>
