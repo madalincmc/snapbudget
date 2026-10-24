@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { LEGAL_VERSION } from '@/lib/legal';
 
 function GoogleIcon() {
   return (
@@ -28,7 +29,13 @@ function GoogleIcon() {
   );
 }
 
-export function GoogleSignInButton({ next }: { next: string }) {
+export function GoogleSignInButton({
+  next,
+  disabled = false,
+}: {
+  next: string;
+  disabled?: boolean;
+}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,6 +46,9 @@ export function GoogleSignInButton({ next }: { next: string }) {
     const supabase = createClient();
     const redirectTo = new URL('/auth/callback', window.location.origin);
     redirectTo.searchParams.set('next', next);
+    // The box was ticked to get here (the button is disabled otherwise). The
+    // callback records this version against the account once the session exists.
+    redirectTo.searchParams.set('terms', LEGAL_VERSION);
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -58,7 +68,7 @@ export function GoogleSignInButton({ next }: { next: string }) {
         variant="outline"
         size="lg"
         onClick={handleClick}
-        disabled={loading}
+        disabled={loading || disabled}
         className="h-12 w-full rounded-full text-base"
       >
         <GoogleIcon />
